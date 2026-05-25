@@ -19,14 +19,14 @@ export default async function FacturacionPage() {
 
   const { data: servicios } = await supabase
     .from("servicios")
-    .select("id, folio, clientes(razon_social), proveedores(razon_social)")
+    .select("id, folio, clientes(razon_social)")
     .is("deleted_at", null)
     .order("folio", { ascending: false });
 
   return (
     <FacturacionView
-      facturas={facturas || []}
-      servicios={servicios || []}
+      facturas={(facturas || []) as any[]}
+      servicios={(servicios || []) as any[]}
     />
   );
 }
