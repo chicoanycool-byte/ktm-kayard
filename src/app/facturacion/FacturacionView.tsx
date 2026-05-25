@@ -19,7 +19,9 @@ interface Factura {
 interface Servicio {
   id: string;
   folio: string;
-  clientes?: { razon_social: string };
+  clientes?: { razon_social: string } | { razon_social: string }[] | null;
+  proveedores?: { razon_social: string } | { razon_social: string }[] | null;
+}
 }
 
 const PAGO_COLORES: Record<string, { bg: string; color: string }> = {
