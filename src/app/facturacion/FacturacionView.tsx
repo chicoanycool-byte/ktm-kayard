@@ -67,7 +67,7 @@ export default function FacturacionView({ facturas: ini, servicios }: { facturas
     const datos = { ...form, importe: form.importe ? parseFloat(form.importe) : null };
     if (editando) {
       await supabase.from("facturacion").update(datos).eq("id", editando.id);
-      setFacturas(facturas.map((f) => f.id === editando.id ? { ...f, ...datos } : f));
+      setFacturas(facturas.map((f) => f.id === editando.id ? { ...f, ...datos } as Factura : f));
     } else {
       const { data } = await supabase.from("facturacion").insert([datos]).select("*, servicios(folio, clientes(razon_social), proveedores(razon_social))").single();
       if (data) setFacturas([data, ...facturas]);
