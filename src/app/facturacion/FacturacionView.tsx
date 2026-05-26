@@ -17,7 +17,7 @@ interface Factura {
 }
 
 interface Servicio {
-  id: string;
+  id: string;{
   folio: string;
   clientes?: { razon_social: string } | { razon_social: string }[] | null;
   proveedores?: { razon_social: string } | { razon_social: string }[] | null;
