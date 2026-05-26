@@ -22,7 +22,6 @@ interface Servicio {
   clientes?: { razon_social: string } | { razon_social: string }[] | null;
   proveedores?: { razon_social: string } | { razon_social: string }[] | null;
 }
-}
 
 const PAGO_COLORES: Record<string, { bg: string; color: string }> = {
   pendiente: { bg: "rgba(245,166,35,0.2)", color: "#F5A623" },
