@@ -4,10 +4,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "KTM – Kayard Transport Management",
   description: "Sistema de gestión de transporte – Kayard Transportes",
-  icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
-  },
 };
 
 export const viewport: Viewport = {
