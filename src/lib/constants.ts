@@ -75,6 +75,13 @@ export const MENU: MenuGrupo[] = [
     ],
   },
   {
+    titulo: "Reportes",
+    items: [
+      { href: "/tiempos", label: "Tiempos y On-time", icon: "⏱", roles: ["admin", "direccion", "operaciones", "monitoreo"] },
+      { href: "/ejecutivo", label: "Dashboard ejecutivo", icon: "📈", roles: ["admin", "direccion", "operaciones", "monitoreo", "ventas"] },
+    ],
+  },
+  {
     titulo: "Configuración",
     items: [
       { href: "/catalogos", label: "Catálogos", icon: "🗂", roles: ["admin", "direccion", "operaciones"] },
