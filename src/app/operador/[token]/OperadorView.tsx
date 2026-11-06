@@ -6,15 +6,16 @@ import { fecha, fechaHora, hora } from "@/lib/format";
 import { urlEvidencia } from "@/components/ServicioDetalle";
 import { C, EstatusBadge } from "@/components/ui";
 
-type Info = Record<string, any> & { evidencias: { path: string; fecha: string }[] };
+type Info = Record<string, any> & { evidencias: { path: string; fecha: string; tipo?: string }[] };
 
 const PASOS = [
   { estatus: "en_carga", label: "Llegué a cargar", color: "#FB923C" },
+  { estatus: "espera_documentos", label: "Terminé de cargar · espero documentos", color: "#FACC15" },
   { estatus: "en_transito", label: "Salí en tránsito", color: "#5BA3D9" },
   { estatus: "en_descarga", label: "Llegué a descargar", color: "#A78BFA" },
   { estatus: "finalizado", label: "Entregué / finalizar", color: "#22C55E" },
 ];
-const ORDEN = ["programado", "asignado", "en_carga", "en_transito", "en_descarga", "finalizado"];
+const ORDEN = ["programado", "asignado", "en_carga", "espera_documentos", "en_transito", "en_descarga", "finalizado"];
 
 function ubicacion(): Promise<{ lat: number; lng: number } | null> {
   return new Promise((res) => {
@@ -51,7 +52,7 @@ export default function OperadorView({ token }: { token: string }) {
     cargar();
   }
 
-  async function subirFotos(files: FileList | null) {
+  async function subirFotos(files: FileList | null, tipo: "evidencia" | "documentos" = "evidencia") {
     if (!files?.length) return;
     setOcupado(true);
     let ok = 0;
@@ -61,7 +62,7 @@ export default function OperadorView({ token }: { token: string }) {
       const path = `${token}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const up = await supabase.storage.from("evidencias").upload(path, f, { contentType: f.type || "image/jpeg" });
       if (up.error) { setMsg(`Error al subir: ${up.error.message}`); continue; }
-      const r = await supabase.rpc("operador_evidencia", { p_token: token, p_path: path });
+      const r = await supabase.rpc("operador_evidencia", { p_token: token, p_path: path, p_tipo: tipo });
       if (!r.error) ok++;
     }
     setOcupado(false);
@@ -82,6 +83,8 @@ export default function OperadorView({ token }: { token: string }) {
 
   const idx = ORDEN.indexOf(info.estatus);
   const cerrado = ["finalizado", "cancelado"].includes(info.estatus);
+  const fotosDocs = info.evidencias.filter((e) => e.tipo === "documentos");
+  const esperandoDocs = info.estatus === "espera_documentos";
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui, sans-serif", padding: "1rem", maxWidth: 560, margin: "0 auto" }}>
@@ -99,7 +102,7 @@ export default function OperadorView({ token }: { token: string }) {
             {PASOS.map((p) => {
               const hecho = ORDEN.indexOf(p.estatus) <= idx;
               return (
-                <button key={p.estatus} disabled={ocupado || hecho || info.estatus === "programado"} onClick={() => avanzar(p.estatus)}
+                <button key={p.estatus} disabled={ocupado || hecho || info.estatus === "programado" || (p.estatus === "en_transito" && esperandoDocs && fotosDocs.length === 0)} onClick={() => avanzar(p.estatus)}
                   style={{ padding: "0.9rem", borderRadius: 10, border: "none", fontSize: 16, fontWeight: 700, cursor: "pointer",
                     background: hecho ? "rgba(255,255,255,.08)" : p.color, color: hecho ? C.muted : "#0A1628", opacity: ocupado ? 0.6 : 1 }}>
                   {hecho ? "✔ " : ""}{p.label}
@@ -107,9 +110,25 @@ export default function OperadorView({ token }: { token: string }) {
               );
             })}
           </div>
+          {esperandoDocs && (
+            <div style={{ marginTop: 12, padding: "0.9rem", borderRadius: 10, background: "rgba(250,204,21,0.1)", border: "1px solid #FACC15" }}>
+              <p style={{ color: "#FACC15", fontWeight: 700, margin: "0 0 6px" }}>Fotos de los documentos ({fotosDocs.length})</p>
+              <p style={{ color: C.text, fontSize: 13, margin: "0 0 10px" }}>Toma foto de cada documento que te entreguen. Se abre la cámara; puedes repetir para agregar más. Necesitas al menos una para salir en tránsito.</p>
+              <label style={{ display: "block", padding: "0.9rem", borderRadius: 10, background: "#FACC15", color: "#0A1628", textAlign: "center", fontWeight: 800, cursor: "pointer" }}>
+                📷 Tomar foto de documento
+                <input type="file" accept="image/*" capture="environment" hidden disabled={ocupado}
+                  onChange={(e) => { subirFotos(e.target.files, "documentos"); e.target.value = ""; }} />
+              </label>
+              {fotosDocs.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                  {fotosDocs.map((e) => <img key={e.path} src={urlEvidencia(e.path)} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 6 }} />)}
+                </div>
+              )}
+            </div>
+          )}
           <label style={{ display: "block", marginTop: 12, padding: "0.9rem", borderRadius: 10, border: `2px dashed ${C.amber}`, color: C.amber, textAlign: "center", fontWeight: 700, cursor: "pointer" }}>
             📷 Tomar / subir fotos de evidencia
-            <input type="file" accept="image/*" capture="environment" multiple hidden disabled={ocupado} onChange={(e) => subirFotos(e.target.files)} />
+            <input type="file" accept="image/*" capture="environment" multiple hidden disabled={ocupado} onChange={(e) => { subirFotos(e.target.files); e.target.value = ""; }} />
           </label>
           {msg && <p style={{ color: C.text, fontSize: 13, marginBottom: 0 }}>{msg}</p>}
         </div>
@@ -155,7 +174,7 @@ export default function OperadorView({ token }: { token: string }) {
           <p style={{ color: C.amber, fontWeight: 700, fontSize: 12, marginTop: 0 }}>EVIDENCIAS</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {info.evidencias.map((e) => (
-              <a key={e.path} href={urlEvidencia(e.path)} target="_blank" rel="noopener noreferrer" title={fechaHora(e.fecha)}>
+              <a key={e.path} href={urlEvidencia(e.path)} target="_blank" rel="noopener noreferrer" title={(e.tipo === "documentos" ? "Documento · " : "") + fechaHora(e.fecha)}>
                 <img src={urlEvidencia(e.path)} alt="" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8 }} />
               </a>
             ))}

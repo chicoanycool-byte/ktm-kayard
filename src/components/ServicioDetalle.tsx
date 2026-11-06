@@ -78,9 +78,12 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
         <>
           <div style={{ marginTop: 16 }}><Seccion titulo={`Evidencias (${evidencias.length})`} /></div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            {evidencias.map((e) => (
+            {[...evidencias].sort((a, b) => (a.tipo === "documentos" ? 0 : 1) - (b.tipo === "documentos" ? 0 : 1)).map((e) => (
               <a key={e.id} href={urlEvidencia(e.foto_path)} target="_blank" rel="noopener noreferrer">
-                <img src={urlEvidencia(e.foto_path)} alt="evidencia" style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.line}` }} />
+                <div style={{ position: "relative" }}>
+                  <img src={urlEvidencia(e.foto_path)} alt="evidencia" style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, border: `1px solid ${e.tipo === "documentos" ? "#FACC15" : C.line}` }} />
+                  {e.tipo === "documentos" && <span style={{ position: "absolute", left: 4, bottom: 4, background: "#FACC15", color: "#0A1628", fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>DOCUMENTO</span>}
+                </div>
               </a>
             ))}
           </div>
