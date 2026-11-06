@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ESTATUS_INFO, type Estatus } from "@/lib/constants";
 import { fecha, fechaHora, hora } from "@/lib/format";
 import { linkWhatsApp, msgCliente, msgOperador, msgProveedor } from "@/lib/whatsapp";
+import { descargarFoto, descargarTodas, nombresFotos } from "@/lib/fotos";
 import { bitacoraExcel, bitacoraPDF } from "@/lib/bitacora";
 import { Btn, C, Dato, EstatusBadge, Modal, Seccion } from "./ui";
 
@@ -22,6 +23,7 @@ export function urlEvidencia(path: string) {
 export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV; onClose: () => void; acciones?: React.ReactNode }) {
   const [bitacora, setBitacora] = useState<any[]>([]);
   const [evidencias, setEvidencias] = useState<any[]>([]);
+  const [bajando, setBajando] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -76,21 +78,41 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
         )}
       </div>
 
-      {evidencias.length > 0 && (
-        <>
-          <div style={{ marginTop: 16 }}><Seccion titulo={`Evidencias (${evidencias.length})`} /></div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            {[...evidencias].sort((a, b) => (a.tipo === "documentos" ? 0 : 1) - (b.tipo === "documentos" ? 0 : 1)).map((e) => (
-              <a key={e.id} href={urlEvidencia(e.foto_path)} target="_blank" rel="noopener noreferrer">
-                <div style={{ position: "relative" }}>
-                  <img src={urlEvidencia(e.foto_path)} alt="evidencia" style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, border: `1px solid ${e.tipo === "documentos" ? "#FACC15" : C.line}` }} />
-                  {e.tipo === "documentos" && <span style={{ position: "absolute", left: 4, bottom: 4, background: "#FACC15", color: "#0A1628", fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>DOCUMENTO</span>}
+      {evidencias.length > 0 && (() => {
+        const fotos = [...evidencias].sort((a, b) => (a.tipo === "documentos" ? 0 : 1) - (b.tipo === "documentos" ? 0 : 1) || a.created_at.localeCompare(b.created_at));
+        const nombres = nombresFotos(s.id_track, fotos);
+        const bajar = async (clave: string, fn: () => Promise<void>) => {
+          setBajando(clave);
+          try { await fn(); } catch (err) { alert((err as Error).message); } finally { setBajando(""); }
+        };
+        return (
+          <>
+            <div style={{ marginTop: 16, display: "flex", alignItems: "flex-end", gap: 10 }}>
+              <div style={{ flex: 1 }}><Seccion titulo={`Fotos del operador (${fotos.length})`} /></div>
+              <Btn small variante="secundario" disabled={!!bajando} onClick={() => bajar("todas", () => descargarTodas(s.id_track, fotos))}>
+                {bajando === "todas" ? "Preparando…" : `⬇ Descargar todas (.zip)`}
+              </Btn>
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+              {fotos.map((e, i) => (
+                <div key={e.id} style={{ width: 120 }}>
+                  <a href={urlEvidencia(e.foto_path)} target="_blank" rel="noopener noreferrer" title="Ver en grande">
+                    <div style={{ position: "relative" }}>
+                      <img src={urlEvidencia(e.foto_path)} alt="evidencia" style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 8, border: `1px solid ${e.tipo === "documentos" ? "#FACC15" : C.line}` }} />
+                      {e.tipo === "documentos" && <span style={{ position: "absolute", left: 4, bottom: 4, background: "#FACC15", color: "#0A1628", fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>DOCUMENTO</span>}
+                    </div>
+                  </a>
+                  <p style={{ margin: "4px 0", fontSize: 10, color: C.muted }}>{fechaHora(e.created_at)}</p>
+                  <button disabled={!!bajando} onClick={() => bajar(e.id, () => descargarFoto(e.foto_path, nombres[i]))}
+                    style={{ width: "100%", background: "transparent", border: `1px solid ${C.line}`, color: C.amber, borderRadius: 6, fontSize: 11, padding: "3px 0", cursor: "pointer" }}>
+                    {bajando === e.id ? "Bajando…" : "⬇ Descargar"}
+                  </button>
                 </div>
-              </a>
-            ))}
-          </div>
-        </>
-      )}
+              ))}
+            </div>
+          </>
+        );
+      })()}
 
       <div style={{ marginTop: 16 }}><Seccion titulo="Bitácora de estatus" /></div>
       {bitacora.length > 0 && (
