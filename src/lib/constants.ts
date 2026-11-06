@@ -48,6 +48,7 @@ export const MENU: MenuGrupo[] = [
       { href: "/servicios", label: "Servicios", icon: "🚛", roles: ["admin", "direccion", "operaciones", "ventas"] },
       { href: "/asignar", label: "Asignar transporte", icon: "🧾", roles: ["admin", "direccion", "operaciones", "compras"] },
       { href: "/monitoreo", label: "Monitoreo", icon: "📡", roles: ["admin", "direccion", "operaciones", "monitoreo"] },
+      { href: "/bitacora", label: "Bitácora de estatus", icon: "🕒", roles: ["admin", "direccion", "operaciones", "monitoreo"] },
     ],
   },
   {
@@ -70,7 +71,7 @@ export const MENU: MenuGrupo[] = [
     titulo: "Finanzas",
     items: [
       { href: "/costos", label: "Costos y venta", icon: "📄", roles: ["admin", "direccion", "facturacion"] },
-      { href: "/indicadores", label: "Indicadores", icon: "📊", roles: ["admin", "direccion", "facturacion"] },
+      { href: "/metricas", label: "Métricas", icon: "📊", roles: ["admin", "direccion", "facturacion", "operaciones"] },
     ],
   },
   {

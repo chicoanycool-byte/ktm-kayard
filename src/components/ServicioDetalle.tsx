@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ESTATUS_INFO, type Estatus } from "@/lib/constants";
 import { fecha, fechaHora, hora } from "@/lib/format";
 import { linkWhatsApp, msgCliente, msgOperador, msgProveedor } from "@/lib/whatsapp";
+import { bitacoraExcel, bitacoraPDF } from "@/lib/bitacora";
 import { Btn, C, Dato, EstatusBadge, Modal, Seccion } from "./ui";
 
 export type ServicioV = Record<string, any> & { id: string; id_track: string; estatus: string; token_operador: string };
@@ -24,7 +25,7 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("servicio_estatus").select("*").eq("servicio_id", s.id).order("created_at").then(({ data }) => setBitacora(data || []));
+    supabase.from("v_bitacora").select("*").eq("servicio_id", s.id).order("created_at").then(({ data }) => setBitacora(data || []));
     supabase.from("evidencias").select("*").eq("servicio_id", s.id).order("created_at").then(({ data }) => setEvidencias(data || []));
   }, [s.id]);
 
@@ -91,6 +92,12 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
       )}
 
       <div style={{ marginTop: 16 }}><Seccion titulo="Bitácora de estatus" /></div>
+      {bitacora.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+          <Btn small variante="secundario" onClick={() => bitacoraExcel(bitacora, `Bitacora_${s.id_track}`)}>⬇ Excel</Btn>
+          <Btn small variante="secundario" onClick={() => bitacoraPDF(bitacora, `${s.id_track} · ${s.cliente} · ${s.origen || "—"} → ${s.destino || "—"}`, `Bitacora_${s.id_track}`)}>⬇ PDF</Btn>
+        </div>
+      )}
       <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
         {bitacora.map((b) => (
           <div key={b.id} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 12, color: C.text }}>
