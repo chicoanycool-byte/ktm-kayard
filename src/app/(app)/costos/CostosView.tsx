@@ -26,7 +26,7 @@ type Form = Record<string, string>;
 export default function CostosView({ servicios: ini }: { servicios: ServicioV[] }) {
   const [servicios, setServicios] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
-  const [filtro, setFiltro] = useState("todos");
+  const [filtro, setFiltro] = useState("pendientes");
   const [sel, setSel] = useState<ServicioV | null>(null);
   const [form, setForm] = useState<Form>({});
   const [aviso, setAviso] = useState("");
@@ -45,7 +45,9 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
   }, []);
 
   const filtrados = useMemo(() => servicios.filter((s) => {
-    if (filtro !== "todos" && (s.estatus_facturacion || "por_facturar") !== filtro) return false;
+    const fact = s.estatus_facturacion || "por_facturar";
+    if (filtro === "pendientes" && !(s.estatus === "finalizado" && fact !== "facturado")) return false;
+    if (!["todos", "pendientes"].includes(filtro) && fact !== filtro) return false;
     const q = busqueda.toLowerCase();
     return [s.id_track, s.cliente, s.proveedor, s.factura_kayard, s.factura_proveedor].some((v) => (v || "").toLowerCase().includes(q));
   }), [servicios, busqueda, filtro]);
@@ -97,7 +99,33 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
     return fila as ServicioV | null;
   }
 
+  function configurarFacturacion() {
+    const t = prompt("WhatsApp de quien factura (10 dígitos):", telFact || "") || "";
+    const n = prompt("Nombre de quien factura:", nomFact || "") || "";
+    if (!t) return false;
+    try { localStorage.setItem("ktm_fact_tel", t); localStorage.setItem("ktm_fact_nombre", n); } catch {}
+    setTelFact(t); setNomFact(n);
+    return true;
+  }
+
+  // Manda el WhatsApp a facturación y marca el servicio como Facturado
+  async function enviarFacturar(s: ServicioV, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    if (s.estatus !== "finalizado") return alert("Solo se pueden mandar a facturar los viajes finalizados.");
+    if (!telFact && !configurarFacturacion()) return;
+    const ventana = window.open("about:blank", "_blank");
+    const { error } = await supabase.from("costos_venta").upsert({
+      servicio_id: s.id, estatus_facturacion: "facturado", enviado_facturar_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    });
+    if (error) { ventana?.close(); return alert(error.message); }
+    const { data: fila } = await supabase.from("v_servicios").select("*").eq("id", s.id).single();
+    if (fila) setServicios((xs) => xs.map((x) => (x.id === fila.id ? fila : x)));
+    if (ventana) ventana.location.href = linkWhatsApp(telFact || localStorage.getItem("ktm_fact_tel"), msgFacturar(fila || s, nomFact || localStorage.getItem("ktm_fact_nombre") || ""));
+    router.refresh();
+  }
+
   async function mandarFacturar() {
+    if (sel?.estatus !== "finalizado") return alert("Solo se pueden mandar a facturar los viajes finalizados.");
     if (!telFact) {
       const t = prompt("WhatsApp de quien factura (10 dígitos):", "") || "";
       const n = prompt("Nombre de quien factura:", "") || "";
@@ -107,7 +135,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
       return;
     }
     const ventana = window.open("about:blank", "_blank");
-    const fila = await guardar(undefined, { estatus_facturacion: "enviado", enviado_facturar_at: new Date().toISOString() });
+    const fila = await guardar(undefined, { estatus_facturacion: "facturado", enviado_facturar_at: new Date().toISOString() });
     if (fila && ventana) ventana.location.href = linkWhatsApp(telFact, msgFacturar(fila, nomFact));
     else ventana?.close();
     setSel(null);
@@ -117,7 +145,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
 
   return (
     <div>
-      <Titulo>Costos y venta</Titulo>
+      <Titulo accion={<Btn small variante="secundario" onClick={configurarFacturacion}>WhatsApp facturación: {telFact ? `${nomFact || ""} ${telFact}` : "configurar"}</Btn>}>Costos y venta</Titulo>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
         <Card><p style={{ margin: 0, color: C.muted, fontSize: 12 }}>Venta</p><p style={{ margin: 0, color: C.amber, fontSize: 22, fontWeight: 700 }}>{money(tot.venta)}</p></Card>
         <Card><p style={{ margin: 0, color: C.muted, fontSize: 12 }}>Costo</p><p style={{ margin: 0, color: C.blue, fontSize: 22, fontWeight: 700 }}>{money(tot.costo)}</p></Card>
@@ -127,11 +155,12 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar ID TRACK, cliente, transportista, factura…" />
         <select value={filtro} onChange={(e) => setFiltro(e.target.value)} style={{ ...inputStyle, maxWidth: 220, backgroundColor: C.card }}>
+          <option value="pendientes">Finalizados por facturar</option>
           <option value="todos">Todos</option>
           {Object.entries(FACT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
       </div>
-      <Tabla columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Pago proveedor"]}>
+      <Tabla columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Pago proveedor", ""]}>
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i} onClick={() => abrir(s)}>
             <Td fuerte>{s.id_track}</Td>
@@ -146,6 +175,13 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <Td>{pct(s.margen_pct)}</Td>
             <Td><span style={{ color: FACT[s.estatus_facturacion || "por_facturar"]?.color, fontWeight: 600, fontSize: 12 }}>{FACT[s.estatus_facturacion || "por_facturar"]?.label}</span></Td>
             <Td>{s.estatus_pago === "pagado" ? "Pagado" : "Pendiente"}</Td>
+            <Td>
+              {s.estatus === "finalizado" && s.estatus_facturacion !== "facturado" ? (
+                <span onClick={(e) => e.stopPropagation()}><Btn small variante="verde" onClick={() => enviarFacturar(s)}>Enviar a facturar</Btn></span>
+              ) : s.estatus_facturacion === "facturado" ? (
+                <span style={{ color: C.muted, fontSize: 11 }}>{s.enviado_facturar_at ? `Enviado ${fecha(s.enviado_facturar_at)}` : ""}</span>
+              ) : <span style={{ color: C.muted, fontSize: 11 }}>Al finalizar</span>}
+            </Td>
           </Tr>
         ))}
       </Tabla>
@@ -198,9 +234,9 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
               <Btn type="submit" disabled={loading} style={{ flex: 1 }}>{loading ? "Guardando…" : "Guardar"}</Btn>
-              <Btn variante="verde" onClick={mandarFacturar} disabled={loading} style={{ flex: 1 }}>{telFact ? `Mandar a facturar${nomFact ? ` (${nomFact})` : ""}` : "Configurar WhatsApp de facturación"}</Btn>
+              <Btn variante="verde" onClick={mandarFacturar} disabled={loading || sel.estatus !== "finalizado"} style={{ flex: 1 }}>{telFact ? `Mandar a facturar${nomFact ? ` (${nomFact})` : ""}` : "Configurar WhatsApp de facturación"}</Btn>
             </div>
-            {telFact && <p style={{ fontSize: 11, color: C.muted }}>Facturación: {telFact} · <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => { try { localStorage.removeItem("ktm_fact_tel"); } catch {} setTelFact(""); }}>cambiar</span></p>}
+            {telFact && <p style={{ fontSize: 11, color: C.muted }}>Facturación: {telFact} · <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={configurarFacturacion}>cambiar</span></p>}
           </form>
         </Modal>
       )}

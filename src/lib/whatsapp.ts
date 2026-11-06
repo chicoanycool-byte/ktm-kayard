@@ -116,23 +116,25 @@ export function msgOperador(s: ServicioWA, link: string) {
 }
 
 export function msgFacturar(s: ServicioWA, nombre: string) {
+  // Mismo contenido que la acción "Enviar facturar" de AppSheet
   return [
     `Hola ${nombre}`.trim(),
     "",
-    "Me apoyas a facturar este servicio, por favor.",
+    "De tu apoyo para facturar este ID TRACK.",
     "",
-    `ID TRACK: ${s.id_track}`,
-    `*Cliente:* ${s.cliente || "—"}`,
-    `*Transporte:* ${s.proveedor || "—"}`,
-    `*Fecha de carga:* ${fecha(s.fecha_carga)}`,
-    `*Factura proveedor:* ${s.factura_proveedor || "—"}`,
-    `*Origen:* ${s.origen || "—"}`,
-    `*Destino:* ${s.destino || "—"}`,
-    `*Flete:* ${money(s.venta_flete)}`,
-    `*Seguro:* ${money(s.venta_seguro)}`,
-    `*Estadías:* ${money(s.venta_estadias)}`,
-    `*Maniobras:* ${money(s.venta_maniobra)}`,
+    `ID TRACK: ${s.id_track}.`,
     "",
-    "Gracias 🙌",
+    `*Cliente*: ${s.cliente || "—"}.`,
+    `*Transporte*: ${s.proveedor || "—"}.`,
+    `*Fecha Carga*: ${fecha(s.fecha_carga)}.`,
+    `*Factura de cliente*: ${s.factura_proveedor || "—"}.`,
+    `*Origen*: ${s.origen || "—"}.`,
+    `*Destino*: ${s.destino || "—"}.`,
+    `*Transporte*: ${money(s.venta_flete)}.`,
+    `*Seguro*: ${money(s.venta_seguro)}.`,
+    `*Estadias*: ${money(s.venta_estadias)}.`,
+    `*Maniobra*: ${money(s.venta_maniobra)}.`,
+    "",
+    "*🙏🤝GRACIAS GORDO 😘.*",
   ].join("\n");
 }

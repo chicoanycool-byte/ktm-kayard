@@ -101,7 +101,7 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
         </select>
       </div>
 
-      <Tabla columnas={["ID TRACK", "Estatus", "Cliente", "Unidad", "Origen", "Fecha carga", "Destino", "Fecha descarga", "Transporte"]}>
+      <Tabla columnas={["ID TRACK", "Estatus", "Cliente", "Unidad", "Origen", "Fecha carga", "Destino", "Fecha descarga", "Transporte", "Facturación"]}>
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i} onClick={() => setDetalle(s)}>
             <Td fuerte>{s.id_track}</Td>
@@ -113,6 +113,7 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
             <Td>{s.destino || "—"}</Td>
             <Td>{fecha(s.fecha_descarga)}</Td>
             <Td>{s.proveedor || <span style={{ color: C.muted }}>Sin asignar</span>}</Td>
+            <Td>{s.estatus_facturacion === "facturado" ? <span style={{ color: C.green, fontWeight: 700, fontSize: 12 }}>FACTURADO</span> : s.estatus === "finalizado" ? <span style={{ color: "#F87171", fontSize: 12 }}>Por facturar</span> : "—"}</Td>
           </Tr>
         ))}
       </Tabla>

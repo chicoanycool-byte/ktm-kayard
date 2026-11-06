@@ -92,5 +92,5 @@ export function rolesDeRuta(pathname: string): string[] | undefined {
   return undefined;
 }
 
-export const FACTURACION_WHATSAPP = process.env.NEXT_PUBLIC_FACTURACION_WHATSAPP || "";
-export const FACTURACION_NOMBRE = process.env.NEXT_PUBLIC_FACTURACION_NOMBRE || "";
+export const FACTURACION_WHATSAPP = process.env.NEXT_PUBLIC_FACTURACION_WHATSAPP || "3334570570";
+export const FACTURACION_NOMBRE = process.env.NEXT_PUBLIC_FACTURACION_NOMBRE || "Cesar";

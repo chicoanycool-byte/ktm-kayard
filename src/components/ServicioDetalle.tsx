@@ -35,6 +35,7 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
     <Modal titulo={`Servicio ${s.id_track}`} onClose={onClose} ancho={820}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
         <EstatusBadge estatus={s.estatus} />
+        {s.estatus_facturacion === "facturado" && <span style={{ padding: "0.2rem 0.65rem", borderRadius: 999, fontSize: 11, fontWeight: 700, background: "rgba(34,197,94,0.2)", color: C.green }}>FACTURADO{s.enviado_facturar_at ? ` · ${fecha(s.enviado_facturar_at)}` : ""}</span>}
         <span style={{ color: C.muted, fontSize: 12 }}>Alta: {fechaHora(s.created_at)}</span>
       </div>
       <div style={g}>
