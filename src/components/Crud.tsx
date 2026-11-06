@@ -25,6 +25,9 @@ export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, s
   const [filas, setFilas] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
+  const [filtros, setFiltros] = useState<Record<string, string>>({});
+  const camposFiltro = campos.filter((c) => c.tipo === "select");
+  const hayFiltros = Object.values(filtros).some(Boolean);
   const [editando, setEditando] = useState<Fila | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -47,9 +50,10 @@ export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, s
   const filtradas = useMemo(() => {
     const q = busqueda.toLowerCase();
     return filas.filter((f) => (verInactivos || f.activo !== false) &&
+      camposFiltro.every((c) => !filtros[c.key] || f[c.key] === filtros[c.key]) &&
       campos.some((c) => String(c.tipo === "select" ? nombreDe(c.opciones, f[c.key]) : f[c.key] ?? "").toLowerCase().includes(q)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filas, busqueda, verInactivos]);
+  }, [filas, busqueda, verInactivos, filtros]);
 
   function abrir(f: Fila | null) {
     setEditando(f);
@@ -93,6 +97,17 @@ export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, s
   return (
     <div>
       <Titulo accion={<Btn onClick={() => abrir(null)}>+ Nuevo {singular}</Btn>}>{titulo}</Titulo>
+      {camposFiltro.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, alignItems: "end", background: C.card, borderRadius: 12, padding: "0.85rem", marginBottom: 12 }}>
+          {camposFiltro.map((c) => (
+            <Campo key={c.key} label={c.label}>
+              <SelectBuscable value={filtros[c.key] || ""} opciones={listas[c.opciones || ""] || []} placeholder="Todos"
+                onChange={(id) => setFiltros((f) => ({ ...f, [c.key]: id }))} />
+            </Campo>
+          ))}
+          {hayFiltros && <Btn variante="secundario" onClick={() => setFiltros({})}>Limpiar filtros</Btn>}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
         <Buscador value={busqueda} onChange={setBusqueda} />
         <label style={{ color: C.muted, fontSize: 13, marginBottom: "1rem", display: "flex", gap: 6, alignItems: "center" }}>
