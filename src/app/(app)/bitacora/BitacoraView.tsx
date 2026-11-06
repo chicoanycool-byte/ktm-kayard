@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { ESTATUS, ESTATUS_INFO } from "@/lib/constants";
 import { bitacoraExcel, bitacoraPDF, type RegBitacora } from "@/lib/bitacora";
+import EnVivo from "@/components/EnVivo";
 import { fechaHora } from "@/lib/format";
 import { Btn, C, Campo, Card, EstatusBadge, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -50,7 +51,8 @@ export default function BitacoraView({ registros }: { registros: RegBitacora[] }
   return (
     <div>
       <Titulo accion={
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <EnVivo tablas={["servicio_estatus"]} />
           <Btn variante="secundario" onClick={() => exportar("excel")} disabled={!!ocupado || !filtrados.length}>{ocupado === "excel" ? "Generando…" : "⬇ Excel"}</Btn>
           <Btn variante="secundario" onClick={() => exportar("pdf")} disabled={!!ocupado || !filtrados.length}>{ocupado === "pdf" ? "Generando…" : "⬇ PDF"}</Btn>
         </div>

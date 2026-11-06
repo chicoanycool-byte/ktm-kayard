@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPerfil } from "@/lib/session";
 import { ESTATUS_INFO, MENU, puedeVer, type Estatus } from "@/lib/constants";
 import { money } from "@/lib/format";
+import EnVivo from "@/components/EnVivo";
 
 export default async function DashboardPage() {
   const { supabase, perfil } = await getPerfil();
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <h2 style={{ color: "white", fontSize: 22, fontWeight: 700, margin: "0 0 0.25rem" }}>Hola, {perfil.full_name.split(" ")[0] || "bienvenido"}</h2>
-      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 1.25rem", fontSize: 14 }}>Así va la operación hoy.</p>
+      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 1.25rem", fontSize: 14, display: "flex", gap: 12, alignItems: "center" }}>Así va la operación hoy. <EnVivo /></p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "0.85rem", marginBottom: "1.75rem" }}>
         {kpis.map((k) => (

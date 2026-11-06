@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ESTATUS, ESTATUS_INFO, REQ_OPCIONES } from "@/lib/constants";
@@ -7,6 +7,7 @@ import { fecha } from "@/lib/format";
 import { linkWhatsApp, msgCliente } from "@/lib/whatsapp";
 import SelectBuscable from "@/components/SelectBuscable";
 import { programaExcel, programaPDF } from "@/lib/programa";
+import EnVivo from "@/components/EnVivo";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -38,6 +39,12 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setServicios(ini);
+    setDetalle((d) => (d ? ini.find((x) => x.id === d.id) || d : d));
+  }, [ini]);
   const supabase = createClient();
 
   const filtrados = useMemo(() => {
@@ -130,6 +137,7 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
           <Btn variante="secundario" onClick={() => exportarPrograma("pdf")} disabled={!!exportando || !filtrados.length}>{exportando === "pdf" ? "Generando…" : "⬇ Programa PDF"}</Btn>
           <Btn variante="secundario" onClick={() => exportarPrograma("excel")} disabled={!!exportando || !filtrados.length}>{exportando === "excel" ? "Generando…" : "⬇ Excel"}</Btn>
           <Btn onClick={() => abrir(null)}>+ Nuevo servicio</Btn>
+          <EnVivo />
         </div>
       }>Servicios</Titulo>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end", background: C.card, borderRadius: 12, padding: "0.85rem", marginBottom: 12 }}>

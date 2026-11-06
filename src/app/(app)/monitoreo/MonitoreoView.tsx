@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ESTATUS, ESTATUS_INFO, type Estatus } from "@/lib/constants";
 import { fecha, fechaHora, hora } from "@/lib/format";
+import EnVivo from "@/components/EnVivo";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, EstatusBadge, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -15,14 +16,11 @@ export default function MonitoreoView({ servicios: ini }: { servicios: ServicioV
   const router = useRouter();
   const supabase = createClient();
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setServicios(ini), [ini]);
-
-  // Se refresca solo cada 60 s para ver los avances del operador
   useEffect(() => {
-    const t = setInterval(() => router.refresh(), 60000);
-    return () => clearInterval(t);
-  }, [router]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setServicios(ini);
+    setDetalle((d) => (d ? ini.find((x) => x.id === d.id) || d : d));
+  }, [ini]);
 
   const conteo = useMemo(() => {
     const c: Record<string, number> = {};
@@ -47,7 +45,7 @@ export default function MonitoreoView({ servicios: ini }: { servicios: ServicioV
 
   return (
     <div>
-      <Titulo accion={<Btn variante="secundario" onClick={() => router.refresh()}>↺ Actualizar</Btn>}>Monitoreo de servicios</Titulo>
+      <Titulo accion={<div style={{ display: "flex", gap: 12, alignItems: "center" }}><EnVivo /><Btn variante="secundario" onClick={() => router.refresh()}>↺ Actualizar</Btn></div>}>Monitoreo de servicios</Titulo>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {ESTATUS.map((e) => (
@@ -91,7 +89,7 @@ export default function MonitoreoView({ servicios: ini }: { servicios: ServicioV
           </Tr>
         ))}
       </Tabla>
-      <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{filtrados.length} servicios · se actualiza cada minuto</p>
+      <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{filtrados.length} servicios · se actualiza en vivo (y cada 30 s)</p>
 
       {detalle && <ServicioDetalle s={detalle} onClose={() => setDetalle(null)} />}
     </div>
