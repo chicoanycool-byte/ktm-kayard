@@ -6,6 +6,7 @@ import { ESTATUS, ESTATUS_INFO, REQ_OPCIONES } from "@/lib/constants";
 import { fecha } from "@/lib/format";
 import { linkWhatsApp, msgCliente } from "@/lib/whatsapp";
 import SelectBuscable from "@/components/SelectBuscable";
+import { programaExcel, programaPDF } from "@/lib/programa";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -23,6 +24,12 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
   const [servicios, setServicios] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<string>("activos");
+  const [fCliente, setFCliente] = useState("");
+  const [fProveedor, setFProveedor] = useState("");
+  const [fTrack, setFTrack] = useState("");
+  const [fDesde, setFDesde] = useState("");
+  const [fHasta, setFHasta] = useState("");
+  const [exportando, setExportando] = useState("");
   const [form, setForm] = useState(VACIO);
   const [editando, setEditando] = useState<ServicioV | null>(null);
   const [abierto, setAbierto] = useState(false);
@@ -38,9 +45,36 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
     return servicios.filter((s) => {
       if (filtro === "activos" && ["finalizado", "cancelado"].includes(s.estatus)) return false;
       if (filtro !== "activos" && filtro !== "todos" && s.estatus !== filtro) return false;
+      if (fCliente && s.cliente_id !== fCliente) return false;
+      if (fProveedor && s.proveedor_id !== fProveedor) return false;
+      if (fTrack && !s.id_track.toLowerCase().includes(fTrack.toLowerCase().trim())) return false;
+      if (fDesde && (!s.fecha_carga || s.fecha_carga < fDesde)) return false;
+      if (fHasta && (!s.fecha_carga || s.fecha_carga > fHasta)) return false;
       return [s.id_track, s.cliente, s.origen, s.destino, s.proveedor, s.operador].some((v) => (v || "").toLowerCase().includes(q));
     });
-  }, [servicios, busqueda, filtro]);
+  }, [servicios, busqueda, filtro, fCliente, fProveedor, fTrack, fDesde, fHasta]);
+
+  const nombreDe = (lista: string, id: string) => listas[lista]?.find((o) => o.id === id)?.nombre || "";
+  const subtituloPrograma = [
+    fProveedor && `Transportista: ${nombreDe("proveedores", fProveedor)}`,
+    fCliente && `Cliente: ${nombreDe("clientes", fCliente)}`,
+    fDesde || fHasta ? `Carga del ${fDesde ? fecha(fDesde) : "inicio"} al ${fHasta ? fecha(fHasta) : "—"}` : "",
+    fTrack && `ID TRACK: ${fTrack}`,
+    filtro === "activos" ? "Servicios activos" : filtro === "todos" ? "Todos los estatus" : ESTATUS_INFO[filtro as keyof typeof ESTATUS_INFO]?.label,
+    `${filtrados.length} servicios`,
+  ].filter(Boolean).join(" · ");
+  const hayFiltros = !!(fCliente || fProveedor || fTrack || fDesde || fHasta || busqueda);
+
+  async function exportarPrograma(tipo: "pdf" | "excel") {
+    const lista = [...filtrados].sort((a, b) => `${a.fecha_carga || ""}${a.cita_carga || ""}`.localeCompare(`${b.fecha_carga || ""}${b.cita_carga || ""}`));
+    setExportando(tipo);
+    try {
+      if (tipo === "pdf") await programaPDF(lista, subtituloPrograma);
+      else await programaExcel(lista);
+    } finally {
+      setExportando("");
+    }
+  }
 
   function abrir(s: ServicioV | null) {
     setEditando(s);
@@ -91,15 +125,29 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
 
   return (
     <div>
-      <Titulo accion={<Btn onClick={() => abrir(null)}>+ Nuevo servicio</Btn>}>Servicios</Titulo>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
-        <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar ID TRACK, cliente, origen, destino…" />
-        <select value={filtro} onChange={(e) => setFiltro(e.target.value)} style={{ ...inputStyle, maxWidth: 220, backgroundColor: C.card }}>
-          <option value="activos">Activos</option>
-          <option value="todos">Todos</option>
-          {ESTATUS.map((e) => <option key={e} value={e}>{ESTATUS_INFO[e].label}</option>)}
-        </select>
+      <Titulo accion={
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn variante="secundario" onClick={() => exportarPrograma("pdf")} disabled={!!exportando || !filtrados.length}>{exportando === "pdf" ? "Generando…" : "⬇ Programa PDF"}</Btn>
+          <Btn variante="secundario" onClick={() => exportarPrograma("excel")} disabled={!!exportando || !filtrados.length}>{exportando === "excel" ? "Generando…" : "⬇ Excel"}</Btn>
+          <Btn onClick={() => abrir(null)}>+ Nuevo servicio</Btn>
+        </div>
+      }>Servicios</Titulo>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end", background: C.card, borderRadius: 12, padding: "0.85rem", marginBottom: 12 }}>
+        <Campo label="Transportista"><SelectBuscable value={fProveedor} onChange={setFProveedor} opciones={listas.proveedores || []} placeholder="Todos" /></Campo>
+        <Campo label="Cliente"><SelectBuscable value={fCliente} onChange={setFCliente} opciones={listas.clientes || []} placeholder="Todos" /></Campo>
+        <Campo label="ID TRACK"><input value={fTrack} onChange={(e) => setFTrack(e.target.value)} placeholder="KTL0593" style={inputStyle} /></Campo>
+        <Campo label="Carga desde"><input type="date" value={fDesde} onChange={(e) => setFDesde(e.target.value)} style={inputStyle} /></Campo>
+        <Campo label="Carga hasta"><input type="date" value={fHasta} onChange={(e) => setFHasta(e.target.value)} style={inputStyle} /></Campo>
+        <Campo label="Estatus">
+          <select value={filtro} onChange={(e) => setFiltro(e.target.value)} style={inputStyle}>
+            <option value="activos">Activos</option>
+            <option value="todos">Todos</option>
+            {ESTATUS.map((e) => <option key={e} value={e}>{ESTATUS_INFO[e].label}</option>)}
+          </select>
+        </Campo>
+        {hayFiltros && <Btn variante="secundario" onClick={() => { setFCliente(""); setFProveedor(""); setFTrack(""); setFDesde(""); setFHasta(""); setBusqueda(""); }}>Limpiar filtros</Btn>}
       </div>
+      <Buscador value={busqueda} onChange={setBusqueda} placeholder="Buscar también por origen, destino, operador…" />
 
       <Tabla columnas={["ID TRACK", "Estatus", "Cliente", "Unidad", "Origen", "Fecha carga", "Destino", "Fecha descarga", "Transporte", "Facturación"]}>
         {filtrados.map((s, i) => (
