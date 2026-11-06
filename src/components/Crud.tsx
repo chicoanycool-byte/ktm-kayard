@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { money } from "@/lib/format";
+import SelectBuscable from "./SelectBuscable";
 import { Btn, Buscador, Campo, C, Grid, Modal, Tabla, Td, Titulo, Tr, inputStyle } from "./ui";
 
 export type Opcion = { id: string; nombre: string };
@@ -120,10 +121,8 @@ export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, s
               {campos.map((c) => (
                 <Campo key={c.key} label={c.label + (c.requerido ? " *" : "")}>
                   {c.tipo === "select" ? (
-                    <select required={c.requerido} value={form[c.key] || ""} onChange={(e) => setForm({ ...form, [c.key]: e.target.value })} style={inputStyle}>
-                      <option value="">Selecciona…</option>
-                      {(listas[c.opciones || ""] || []).map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
-                    </select>
+                    <SelectBuscable requerido={c.requerido} value={form[c.key] || ""} opciones={listas[c.opciones || ""] || []}
+                      onChange={(id) => setForm((f) => ({ ...f, [c.key]: id }))} />
                   ) : (
                     <input required={c.requerido} value={form[c.key] || ""} onChange={(e) => setForm({ ...form, [c.key]: e.target.value })}
                       type={c.tipo === "numero" || c.tipo === "dinero" ? "number" : c.tipo === "tel" ? "tel" : c.tipo === "email" ? "email" : c.tipo === "url" ? "url" : "text"}

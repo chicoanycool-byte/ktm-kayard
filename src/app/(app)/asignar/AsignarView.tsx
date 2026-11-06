@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { fecha, hora } from "@/lib/format";
 import { linkWhatsApp, msgOperador, msgProveedor } from "@/lib/whatsapp";
+import SelectBuscable from "@/components/SelectBuscable";
 import { linkOperador, type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, C, Campo, Card, Dato, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -103,16 +104,10 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
               <Grid>
                 <Seccion titulo="Datos del transporte" />
                 <Campo label="Línea de transporte *">
-                  <select required value={form.proveedor_id} onChange={(e) => setForm({ ...form, proveedor_id: e.target.value, operador_id: "" })} style={inputStyle}>
-                    <option value="">Selecciona…</option>
-                    {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                  </select>
+                  <SelectBuscable requerido value={form.proveedor_id} opciones={proveedores} onChange={(id) => setForm((f) => ({ ...f, proveedor_id: id, operador_id: "" }))} />
                 </Campo>
                 <Campo label="Operador *">
-                  <select required value={form.operador_id} onChange={(e) => elegirOperador(e.target.value)} style={inputStyle}>
-                    <option value="">Selecciona…</option>
-                    {opsProveedor.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
-                  </select>
+                  <SelectBuscable requerido value={form.operador_id} opciones={opsProveedor} onChange={elegirOperador} />
                 </Campo>
                 <Campo label="Placas unidad *"><input required value={form.placas_unidad} onChange={set("placas_unidad")} style={inputStyle} /></Campo>
                 <Campo label="Económico unidad"><input value={form.economico_unidad} onChange={set("economico_unidad")} style={inputStyle} /></Campo>

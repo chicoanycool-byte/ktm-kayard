@@ -3,6 +3,8 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { money, pct } from "@/lib/format";
 import type { ServicioV } from "@/components/ServicioDetalle";
+import { useState } from "react";
+import SelectBuscable from "@/components/SelectBuscable";
 import { Btn, C, Campo, Card, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
 const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -21,6 +23,8 @@ function agrupar(servicios: ServicioV[], clave: (s: ServicioV) => string) {
 export default function IndicadoresView({ servicios, listas, filtros }: {
   servicios: ServicioV[]; listas: Record<string, { id: string; nombre: string }[]>; filtros: Record<string, string | undefined>;
 }) {
+  const [cliente, setCliente] = useState(filtros.cliente || "");
+  const [proveedor, setProveedor] = useState(filtros.proveedor || "");
   const tot = useMemo(() => {
     const venta = servicios.reduce((a, s) => a + Number(s.total_venta || 0), 0);
     const costo = servicios.reduce((a, s) => a + Number(s.total_costo || 0), 0);
@@ -66,16 +70,10 @@ export default function IndicadoresView({ servicios, listas, filtros }: {
             </select>
           </Campo>
           <Campo label="Cliente">
-            <select name="cliente" defaultValue={filtros.cliente || ""} style={inputStyle}>
-              <option value="">Todos</option>
-              {listas.clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+            <SelectBuscable name="cliente" value={cliente} onChange={setCliente} opciones={listas.clientes} placeholder="Todos" />
           </Campo>
           <Campo label="Transportista">
-            <select name="proveedor" defaultValue={filtros.proveedor || ""} style={inputStyle}>
-              <option value="">Todos</option>
-              {listas.proveedores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+            <SelectBuscable name="proveedor" value={proveedor} onChange={setProveedor} opciones={listas.proveedores} placeholder="Todos" />
           </Campo>
           <div style={{ display: "flex", gap: 8 }}>
             <Btn type="submit">Filtrar</Btn>

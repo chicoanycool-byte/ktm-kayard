@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ESTATUS, ESTATUS_INFO, REQ_OPCIONES } from "@/lib/constants";
 import { fecha } from "@/lib/format";
 import { linkWhatsApp, msgCliente } from "@/lib/whatsapp";
+import SelectBuscable from "@/components/SelectBuscable";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -85,10 +86,7 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
   }
 
   const sel = (k: keyof typeof VACIO, lista: string, requerido = false) => (
-    <select required={requerido} value={form[k]} onChange={set(k)} style={inputStyle}>
-      <option value="">Selecciona…</option>
-      {(listas[lista] || []).map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
-    </select>
+    <SelectBuscable requerido={requerido} value={form[k]} opciones={listas[lista] || []} onChange={(id) => setForm((f) => ({ ...f, [k]: id }))} />
   );
 
   return (
