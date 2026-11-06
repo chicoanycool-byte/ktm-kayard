@@ -88,6 +88,8 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
     if (!sel) return null;
     setLoading(true);
     const datos: Record<string, unknown> = { servicio_id: sel.id, updated_at: new Date().toISOString(), ...extra };
+    if (form.estatus_facturacion === "facturado" && !sel.enviado_facturar_at && !extra.enviado_facturar_at) datos.enviado_facturar_at = new Date().toISOString();
+    if (form.estatus_facturacion === "por_facturar" && !extra.estatus_facturacion) datos.enviado_facturar_at = null;
     Object.entries(form).forEach(([k, v]) => (datos[k] = k.startsWith("costo_") || k.startsWith("venta_") ? Number(v || 0) : v || null));
     Object.assign(datos, extra);
     const { error } = await supabase.from("costos_venta").upsert(datos);
@@ -121,6 +123,19 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
     const { data: fila } = await supabase.from("v_servicios").select("*").eq("id", s.id).single();
     if (fila) setServicios((xs) => xs.map((x) => (x.id === fila.id ? fila : x)));
     if (ventana) ventana.location.href = linkWhatsApp(telFact || localStorage.getItem("ktm_fact_tel"), msgFacturar(fila || s, nomFact || localStorage.getItem("ktm_fact_nombre") || ""));
+    router.refresh();
+  }
+
+  async function cambiarFacturacion(s: ServicioV, estatus: "por_facturar" | "facturado", e?: React.MouseEvent) {
+    e?.stopPropagation();
+    if (estatus === "por_facturar" && !confirm(`¿Quitar el estatus Facturado a ${s.id_track}? Regresa a "Por facturar".`)) return;
+    const { error } = await supabase.from("costos_venta").upsert({
+      servicio_id: s.id, estatus_facturacion: estatus,
+      enviado_facturar_at: estatus === "facturado" ? new Date().toISOString() : null, updated_at: new Date().toISOString(),
+    });
+    if (error) return alert(error.message);
+    const { data: fila } = await supabase.from("v_servicios").select("*").eq("id", s.id).single();
+    if (fila) setServicios((xs) => xs.map((x) => (x.id === fila.id ? fila : x)));
     router.refresh();
   }
 
@@ -179,7 +194,10 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
               {s.estatus === "finalizado" && s.estatus_facturacion !== "facturado" ? (
                 <span onClick={(e) => e.stopPropagation()}><Btn small variante="verde" onClick={() => enviarFacturar(s)}>Enviar a facturar</Btn></span>
               ) : s.estatus_facturacion === "facturado" ? (
-                <span style={{ color: C.muted, fontSize: 11 }}>{s.enviado_facturar_at ? `Enviado ${fecha(s.enviado_facturar_at)}` : ""}</span>
+                <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                  <span style={{ color: C.muted, fontSize: 11 }}>{s.enviado_facturar_at ? fecha(s.enviado_facturar_at) : ""}</span>
+                  <Btn small variante="peligro" onClick={() => cambiarFacturacion(s, "por_facturar")}>Quitar facturado</Btn>
+                </span>
               ) : <span style={{ color: C.muted, fontSize: 11 }}>Al finalizar</span>}
             </Td>
           </Tr>
