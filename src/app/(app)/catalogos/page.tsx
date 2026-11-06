@@ -1,4 +1,5 @@
 import Crud from "@/components/Crud";
+import { traerTodo } from "@/lib/listas";
 import { requireRol } from "@/lib/session";
 
 export default async function CatalogosPage() {
@@ -6,7 +7,7 @@ export default async function CatalogosPage() {
   const [u, c, p] = await Promise.all([
     supabase.from("tipos_unidad").select("*").order("nombre"),
     supabase.from("tipos_carga").select("*").order("nombre"),
-    supabase.from("poblaciones").select("*").order("nombre"),
+    traerTodo((a, b) => supabase.from("poblaciones").select("*").order("nombre").range(a, b)).then((data) => ({ data })),
   ]);
   return (
     <div style={{ display: "grid", gap: "2.5rem" }}>
