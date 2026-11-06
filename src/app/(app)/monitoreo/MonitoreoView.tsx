@@ -8,7 +8,7 @@ import EnVivo from "@/components/EnVivo";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, EstatusBadge, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
-export default function MonitoreoView({ servicios: ini }: { servicios: ServicioV[] }) {
+export default function MonitoreoView({ servicios: ini, esAdmin = false }: { servicios: ServicioV[]; esAdmin?: boolean }) {
   const [servicios, setServicios] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState("activos");
@@ -91,7 +91,7 @@ export default function MonitoreoView({ servicios: ini }: { servicios: ServicioV
       </Tabla>
       <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{filtrados.length} servicios · se actualiza en vivo (y cada 30 s)</p>
 
-      {detalle && <ServicioDetalle s={detalle} onClose={() => setDetalle(null)} />}
+      {detalle && <ServicioDetalle s={detalle} esAdmin={esAdmin} onCambio={() => router.refresh()} onClose={() => setDetalle(null)} acciones={esAdmin ? <Btn small href={`/asignar?id=${detalle.id}`}>Editar transporte</Btn> : undefined} />}
     </div>
   );
 }

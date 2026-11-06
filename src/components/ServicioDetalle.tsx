@@ -2,12 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ESTATUS_INFO, type Estatus } from "@/lib/constants";
+import { ESTATUS, ESTATUS_INFO, type Estatus } from "@/lib/constants";
 import { fecha, fechaHora, hora } from "@/lib/format";
 import { linkWhatsApp, msgCliente, msgOperador, msgProveedor } from "@/lib/whatsapp";
 import { descargarFoto, descargarTodas, nombresFotos } from "@/lib/fotos";
 import { bitacoraExcel, bitacoraPDF } from "@/lib/bitacora";
-import { Btn, C, Dato, EstatusBadge, Modal, Seccion } from "./ui";
+import BitacoraEditor from "./BitacoraEditor";
+import { Btn, C, Dato, EstatusBadge, Modal, Seccion, inputStyle } from "./ui";
 
 export type ServicioV = Record<string, any> & { id: string; id_track: string; estatus: string; token_operador: string };
 
@@ -20,16 +21,39 @@ export function urlEvidencia(path: string) {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/evidencias/${path}`;
 }
 
-export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV; onClose: () => void; acciones?: React.ReactNode }) {
+export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false, onCambio }: {
+  s: ServicioV; onClose: () => void; acciones?: React.ReactNode; esAdmin?: boolean; onCambio?: () => void;
+}) {
   const [bitacora, setBitacora] = useState<any[]>([]);
   const [evidencias, setEvidencias] = useState<any[]>([]);
   const [bajando, setBajando] = useState("");
+  const [editarBitacora, setEditarBitacora] = useState(false);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.from("v_bitacora").select("*").eq("servicio_id", s.id).order("created_at").then(({ data }) => setBitacora(data || []));
     supabase.from("evidencias").select("*").eq("servicio_id", s.id).order("created_at").then(({ data }) => setEvidencias(data || []));
-  }, [s.id]);
+  }, [s.id, s.estatus, s.updated_at, version]);
+
+  const recargar = () => { setVersion((v) => v + 1); onCambio?.(); };
+
+  async function cambiarEstatus(estatus: string) {
+    if (estatus === s.estatus) return;
+    if (!confirm(`¿Cambiar el estatus de ${s.id_track} a "${ESTATUS_INFO[estatus as Estatus]?.label}"?`)) return;
+    const { error } = await createClient().from("servicios").update({ estatus }).eq("id", s.id);
+    if (error) return alert(error.message);
+    recargar();
+  }
+
+  async function borrarFoto(e: any) {
+    if (!confirm("¿Borrar esta foto? No se puede recuperar.")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("evidencias").delete().eq("id", e.id);
+    if (error) return alert(error.message);
+    await supabase.storage.from("evidencias").remove([e.foto_path]);
+    recargar();
+  }
 
   const g = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.85rem" } as const;
 
@@ -39,6 +63,14 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
         <EstatusBadge estatus={s.estatus} />
         {s.estatus_facturacion === "facturado" && <span style={{ padding: "0.2rem 0.65rem", borderRadius: 999, fontSize: 11, fontWeight: 700, background: "rgba(34,197,94,0.2)", color: C.green }}>FACTURADO{s.enviado_facturar_at ? ` · ${fecha(s.enviado_facturar_at)}` : ""}</span>}
         <span style={{ color: C.muted, fontSize: 12 }}>Alta: {fechaHora(s.created_at)}</span>
+        {esAdmin && (
+          <label style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: C.amber }}>
+            Cambiar estatus:
+            <select value={s.estatus} onChange={(e) => cambiarEstatus(e.target.value)} style={{ ...inputStyle, width: 190, padding: "0.3rem 0.5rem", fontSize: 12, color: ESTATUS_INFO[s.estatus as Estatus]?.color }}>
+              {ESTATUS.map((e) => <option key={e} value={e}>{ESTATUS_INFO[e].label}</option>)}
+            </select>
+          </label>
+        )}
       </div>
       <div style={g}>
         <Seccion titulo="Datos generales" />
@@ -107,6 +139,9 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
                     style={{ width: "100%", background: "transparent", border: `1px solid ${C.line}`, color: C.amber, borderRadius: 6, fontSize: 11, padding: "3px 0", cursor: "pointer" }}>
                     {bajando === e.id ? "Bajando…" : "⬇ Descargar"}
                   </button>
+                  {esAdmin && (
+                    <button onClick={() => borrarFoto(e)} style={{ width: "100%", marginTop: 4, background: "transparent", border: "1px solid rgba(239,68,68,.5)", color: C.red, borderRadius: 6, fontSize: 11, padding: "3px 0", cursor: "pointer" }}>Borrar</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -115,21 +150,23 @@ export default function ServicioDetalle({ s, onClose, acciones }: { s: ServicioV
       })()}
 
       <div style={{ marginTop: 16 }}><Seccion titulo="Bitácora de estatus" /></div>
-      {bitacora.length > 0 && (
-        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-          <Btn small variante="secundario" onClick={() => bitacoraExcel(bitacora, `Bitacora_${s.id_track}`)}>⬇ Excel</Btn>
-          <Btn small variante="secundario" onClick={() => bitacoraPDF(bitacora, `${s.id_track} · ${s.cliente} · ${s.origen || "—"} → ${s.destino || "—"}`, `Bitacora_${s.id_track}`)}>⬇ PDF</Btn>
-        </div>
-      )}
+      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+        {bitacora.length > 0 && <Btn small variante="secundario" onClick={() => bitacoraExcel(bitacora, `Bitacora_${s.id_track}`)}>⬇ Excel</Btn>}
+        {bitacora.length > 0 && <Btn small variante="secundario" onClick={() => bitacoraPDF(bitacora, `${s.id_track} · ${s.cliente} · ${s.origen || "—"} → ${s.destino || "—"}`, `Bitacora_${s.id_track}`)}>⬇ PDF</Btn>}
+        {esAdmin && <Btn small variante={editarBitacora ? "primario" : "secundario"} onClick={() => setEditarBitacora(!editarBitacora)}>{editarBitacora ? "Terminar edición" : "✎ Editar bitácora"}</Btn>}
+      </div>
+      {esAdmin && editarBitacora ? <BitacoraEditor servicioId={s.id} registros={bitacora} onCambio={recargar} /> : (
       <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
         {bitacora.map((b) => (
           <div key={b.id} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 12, color: C.text }}>
             <span style={{ color: C.muted, minWidth: 110 }}>{fechaHora(b.created_at)}</span>
             <span style={{ color: ESTATUS_INFO[b.estatus as Estatus]?.color }}>{ESTATUS_INFO[b.estatus as Estatus]?.label || b.estatus}</span>
             {b.origen === "operador" && <span style={{ color: C.muted }}>· por el operador</span>}
+            {b.comentario && <span style={{ color: C.muted }}>· {b.comentario}</span>}
           </div>
         ))}
       </div>
+      )}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 20 }}>
         <Btn small variante="verde" href={linkWhatsApp(s.cliente_telefono, msgCliente(s))} target="_blank">WhatsApp cliente</Btn>

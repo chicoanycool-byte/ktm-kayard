@@ -21,7 +21,7 @@ const VACIO = {
   comentarios: "",
 };
 
-export default function ServiciosView({ servicios: ini, listas }: { servicios: ServicioV[]; listas: Record<string, Opcion[]> }) {
+export default function ServiciosView({ servicios: ini, listas, esAdmin = false }: { servicios: ServicioV[]; listas: Record<string, Opcion[]>; esAdmin?: boolean }) {
   const [servicios, setServicios] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<string>("activos");
@@ -176,11 +176,11 @@ export default function ServiciosView({ servicios: ini, listas }: { servicios: S
       <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{filtrados.length} servicios</p>
 
       {detalle && (
-        <ServicioDetalle s={detalle} onClose={() => setDetalle(null)} acciones={
+        <ServicioDetalle s={detalle} esAdmin={esAdmin} onCambio={() => router.refresh()} onClose={() => setDetalle(null)} acciones={
           <>
-            {["programado", "asignado"].includes(detalle.estatus) && <Btn small href={`/asignar?id=${detalle.id}`}>{detalle.proveedor ? "Cambiar transporte" : "Asignar transporte"}</Btn>}
-            {!["finalizado", "cancelado"].includes(detalle.estatus) && <Btn small variante="secundario" onClick={() => abrir(detalle)}>Editar</Btn>}
-            {!["finalizado", "cancelado"].includes(detalle.estatus) && <Btn small variante="peligro" onClick={() => cancelar(detalle)}>Cancelar servicio</Btn>}
+            {(esAdmin || ["programado", "asignado"].includes(detalle.estatus)) && <Btn small href={`/asignar?id=${detalle.id}`}>{detalle.proveedor ? (esAdmin ? "Editar transporte" : "Cambiar transporte") : "Asignar transporte"}</Btn>}
+            {(esAdmin || !["finalizado", "cancelado"].includes(detalle.estatus)) && <Btn small variante="secundario" onClick={() => abrir(detalle)}>Editar datos</Btn>}
+            {detalle.estatus !== "cancelado" && (esAdmin || detalle.estatus !== "finalizado") && <Btn small variante="peligro" onClick={() => cancelar(detalle)}>Cancelar servicio</Btn>}
           </>
         } />
       )}

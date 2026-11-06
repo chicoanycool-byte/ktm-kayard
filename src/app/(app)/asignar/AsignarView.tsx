@@ -51,8 +51,9 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
     setLoading(true);
     setError("");
     const datos: Record<string, unknown> = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === "" ? null : v]));
-    datos.estatus = "asignado";
-    datos.asignado_at = new Date().toISOString();
+    // Solo avanza a "Asignado" si estaba Programado; si ya iba más adelante, conserva su estatus
+    if (sel.estatus === "programado") datos.estatus = "asignado";
+    if (!sel.asignado_at) datos.asignado_at = new Date().toISOString();
     const { error } = await supabase.from("servicios").update(datos).eq("id", sel.id);
     if (error) {
       setLoading(false);
