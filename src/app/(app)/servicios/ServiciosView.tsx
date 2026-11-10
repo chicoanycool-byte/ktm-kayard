@@ -6,6 +6,7 @@ import { ESTATUS, ESTATUS_INFO, REQ_OPCIONES } from "@/lib/constants";
 import { fecha } from "@/lib/format";
 import { linkWhatsApp, msgCliente } from "@/lib/whatsapp";
 import SelectBuscable from "@/components/SelectBuscable";
+import { enviarAFacturar } from "@/lib/facturacion";
 import { programaExcel, programaPDF } from "@/lib/programa";
 import EnVivo from "@/components/EnVivo";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
@@ -117,6 +118,15 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
     router.refresh();
   }
 
+  async function facturar(s: ServicioV) {
+    const fila = await enviarAFacturar(s);
+    if (fila) {
+      setServicios((xs) => xs.map((x) => (x.id === fila.id ? fila : x)));
+      setDetalle((d) => (d && d.id === fila.id ? fila : d));
+    }
+    router.refresh();
+  }
+
   async function cancelar(s: ServicioV) {
     if (!confirm(`¿Cancelar el servicio ${s.id_track}?`)) return;
     const { error } = await supabase.from("servicios").update({ estatus: "cancelado" }).eq("id", s.id);
@@ -169,7 +179,9 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
             <Td>{s.destino || "—"}</Td>
             <Td>{fecha(s.fecha_descarga)}</Td>
             <Td>{s.proveedor || <span style={{ color: C.muted }}>Sin asignar</span>}</Td>
-            <Td>{s.estatus_facturacion === "facturado" ? <span style={{ color: C.green, fontWeight: 700, fontSize: 12 }}>FACTURADO</span> : s.estatus === "finalizado" ? <span style={{ color: "#F87171", fontSize: 12 }}>Por facturar</span> : "—"}</Td>
+            <Td>{s.estatus_facturacion === "facturado" ? <span style={{ color: C.green, fontWeight: 700, fontSize: 12 }}>FACTURADO</span> : s.estatus === "finalizado" ? (
+              <span onClick={(e) => e.stopPropagation()}><Btn small variante="verde" onClick={() => facturar(s)}>Enviar a facturar</Btn></span>
+            ) : "—"}</Td>
           </Tr>
         ))}
       </Tabla>
@@ -180,6 +192,7 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
           <>
             {(esAdmin || ["programado", "asignado"].includes(detalle.estatus)) && <Btn small href={`/asignar?id=${detalle.id}`}>{detalle.proveedor ? (esAdmin ? "Editar transporte" : "Cambiar transporte") : "Asignar transporte"}</Btn>}
             {(esAdmin || !["finalizado", "cancelado"].includes(detalle.estatus)) && <Btn small variante="secundario" onClick={() => abrir(detalle)}>Editar datos</Btn>}
+            {detalle.estatus === "finalizado" && detalle.estatus_facturacion !== "facturado" && <Btn small variante="verde" onClick={() => facturar(detalle)}>Enviar a facturar</Btn>}
             {detalle.estatus !== "cancelado" && (esAdmin || detalle.estatus !== "finalizado") && <Btn small variante="peligro" onClick={() => cancelar(detalle)}>Cancelar servicio</Btn>}
           </>
         } />

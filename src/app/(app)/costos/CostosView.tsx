@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { FACTURACION_NOMBRE, FACTURACION_WHATSAPP } from "@/lib/constants";
 import { fecha, money, pct } from "@/lib/format";
 import { linkWhatsApp, msgFacturar } from "@/lib/whatsapp";
+import { enviarAFacturar } from "@/lib/facturacion";
 import type { ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, Card, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -113,16 +114,8 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
   // Manda el WhatsApp a facturación y marca el servicio como Facturado
   async function enviarFacturar(s: ServicioV, e?: React.MouseEvent) {
     e?.stopPropagation();
-    if (s.estatus !== "finalizado") return alert("Solo se pueden mandar a facturar los viajes finalizados.");
-    if (!telFact && !configurarFacturacion()) return;
-    const ventana = window.open("about:blank", "_blank");
-    const { error } = await supabase.from("costos_venta").upsert({
-      servicio_id: s.id, estatus_facturacion: "facturado", enviado_facturar_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    });
-    if (error) { ventana?.close(); return alert(error.message); }
-    const { data: fila } = await supabase.from("v_servicios").select("*").eq("id", s.id).single();
+    const fila = await enviarAFacturar(s);
     if (fila) setServicios((xs) => xs.map((x) => (x.id === fila.id ? fila : x)));
-    if (ventana) ventana.location.href = linkWhatsApp(telFact || localStorage.getItem("ktm_fact_tel"), msgFacturar(fila || s, nomFact || localStorage.getItem("ktm_fact_nombre") || ""));
     router.refresh();
   }
 
