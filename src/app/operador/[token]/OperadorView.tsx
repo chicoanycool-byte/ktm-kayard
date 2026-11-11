@@ -9,13 +9,13 @@ import { C, EstatusBadge } from "@/components/ui";
 type Info = Record<string, any> & { evidencias: { path: string; fecha: string; tipo?: string }[] };
 
 const PASOS = [
-  { estatus: "en_carga", label: "Llegué a cargar", color: "#FB923C" },
-  { estatus: "espera_documentos", label: "Terminé de cargar · espero documentos", color: "#FACC15" },
+  { estatus: "llegada_carga", label: "Llegué a cargar", color: "#FB923C" },
   { estatus: "en_transito", label: "Salí en tránsito", color: "#5BA3D9" },
-  { estatus: "en_descarga", label: "Llegué a descargar", color: "#A78BFA" },
-  { estatus: "finalizado", label: "Entregué / finalizar", color: "#22C55E" },
+  { estatus: "llegada_descarga", label: "Llegué a descargar", color: "#A78BFA" },
+  { estatus: "entrega_documentos", label: "Entrega de documentos", color: "#FACC15" },
+  { estatus: "finalizado", label: "Finalizar viaje", color: "#22C55E" },
 ];
-const ORDEN = ["programado", "asignado", "en_carga", "espera_documentos", "en_transito", "en_descarga", "finalizado"];
+const ORDEN = ["programado", "asignado", "llegada_carga", "en_transito", "llegada_descarga", "entrega_documentos", "finalizado"];
 
 function ubicacion(): Promise<{ lat: number; lng: number } | null> {
   return new Promise((res) => {
@@ -84,7 +84,7 @@ export default function OperadorView({ token }: { token: string }) {
   const idx = ORDEN.indexOf(info.estatus);
   const cerrado = ["finalizado", "cancelado"].includes(info.estatus);
   const fotosDocs = info.evidencias.filter((e) => e.tipo === "documentos");
-  const esperandoDocs = info.estatus === "espera_documentos";
+  const esperandoDocs = info.estatus === "entrega_documentos";
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui, sans-serif", padding: "1rem", maxWidth: 560, margin: "0 auto" }}>
@@ -102,7 +102,7 @@ export default function OperadorView({ token }: { token: string }) {
             {PASOS.map((p) => {
               const hecho = ORDEN.indexOf(p.estatus) <= idx;
               return (
-                <button key={p.estatus} disabled={ocupado || hecho || info.estatus === "programado" || (p.estatus === "en_transito" && esperandoDocs && fotosDocs.length === 0)} onClick={() => avanzar(p.estatus)}
+                <button key={p.estatus} disabled={ocupado || hecho || info.estatus === "programado" || (p.estatus === "finalizado" && fotosDocs.length === 0)} onClick={() => avanzar(p.estatus)}
                   style={{ padding: "0.9rem", borderRadius: 10, border: "none", fontSize: 16, fontWeight: 700, cursor: "pointer",
                     background: hecho ? "rgba(255,255,255,.08)" : p.color, color: hecho ? C.muted : "#0A1628", opacity: ocupado ? 0.6 : 1 }}>
                   {hecho ? "✔ " : ""}{p.label}
@@ -113,7 +113,7 @@ export default function OperadorView({ token }: { token: string }) {
           {esperandoDocs && (
             <div style={{ marginTop: 12, padding: "0.9rem", borderRadius: 10, background: "rgba(250,204,21,0.1)", border: "1px solid #FACC15" }}>
               <p style={{ color: "#FACC15", fontWeight: 700, margin: "0 0 6px" }}>Fotos de los documentos ({fotosDocs.length})</p>
-              <p style={{ color: C.text, fontSize: 13, margin: "0 0 10px" }}>Toma foto de cada documento que te entreguen. Se abre la cámara; puedes repetir para agregar más. Necesitas al menos una para salir en tránsito.</p>
+              <p style={{ color: C.text, fontSize: 13, margin: "0 0 10px" }}>Toma foto de cada documento de entrega (sellados/firmados). Se abre la cámara; puedes repetir para agregar más. Necesitas al menos una para finalizar el viaje.</p>
               <label style={{ display: "block", padding: "0.9rem", borderRadius: 10, background: "#FACC15", color: "#0A1628", textAlign: "center", fontWeight: 800, cursor: "pointer" }}>
                 📷 Tomar foto de documento
                 <input type="file" accept="image/*" capture="environment" hidden disabled={ocupado}

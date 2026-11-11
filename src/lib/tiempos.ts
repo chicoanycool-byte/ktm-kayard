@@ -9,11 +9,11 @@ export type RegT = { servicio_id: string; estatus: string; created_at: string };
 
 export const ETAPAS = [
   { clave: "asignacion", label: "Programado → Asignado", de: "programado", a: ["asignado"] },
-  { clave: "llegada", label: "Asignado → Llegada a carga", de: "asignado", a: ["en_carga"] },
-  { clave: "carga", label: "Carga", de: "en_carga", a: ["espera_documentos", "en_transito"] },
-  { clave: "documentos", label: "Espera de documentos", de: "espera_documentos", a: ["en_transito"] },
-  { clave: "transito", label: "Tránsito", de: "en_transito", a: ["en_descarga", "finalizado"] },
-  { clave: "descarga", label: "Descarga", de: "en_descarga", a: ["finalizado"] },
+  { clave: "llegada", label: "Asignado → Llegada a carga", de: "asignado", a: ["llegada_carga"] },
+  { clave: "carga", label: "En carga (llegada → salida)", de: "llegada_carga", a: ["en_transito"] },
+  { clave: "transito", label: "Tránsito", de: "en_transito", a: ["llegada_descarga", "entrega_documentos", "finalizado"] },
+  { clave: "descarga", label: "Descarga (llegada → documentos)", de: "llegada_descarga", a: ["entrega_documentos", "finalizado"] },
+  { clave: "documentos", label: "Entrega de documentos → Finalizado", de: "entrega_documentos", a: ["finalizado"] },
 ] as const;
 export type ClaveEtapa = (typeof ETAPAS)[number]["clave"] | "puerta_a_puerta" | "ciclo";
 
@@ -56,21 +56,21 @@ export function analizar(servicios: ServT[], registros: RegT[], toleranciaMin = 
       const fin = e.a.map((x) => marcas[x]).find((x) => x !== undefined);
       if (ini !== undefined && fin !== undefined && fin >= ini) horas[e.clave] = (fin - ini) / 3600000;
     }
-    if (marcas.en_carga !== undefined && marcas.finalizado !== undefined) horas.puerta_a_puerta = (marcas.finalizado - marcas.en_carga) / 3600000;
+    if (marcas.llegada_carga !== undefined && marcas.finalizado !== undefined) horas.puerta_a_puerta = (marcas.finalizado - marcas.llegada_carga) / 3600000;
     if (marcas.finalizado !== undefined) horas.ciclo = (marcas.finalizado - marcas.programado) / 3600000;
 
-    const llegadaCarga = marcas.en_carga ?? null;
+    const llegadaCarga = marcas.llegada_carga ?? null;
     const citaCarga = citaMs(s.fecha_carga, s.cita_carga);
-    const llegadaEntrega = marcas.en_descarga ?? marcas.finalizado ?? null;
+    const llegadaEntrega = marcas.llegada_descarga ?? null;
     const citaEntrega = citaMs(s.fecha_descarga || s.fecha_carga, s.cita_descarga);
     const onTimeCarga = llegadaCarga !== null && citaCarga !== null ? llegadaCarga <= citaCarga + tol : null;
-    const onTimeEntrega = marcas.en_descarga !== undefined && citaEntrega !== null ? llegadaEntrega! <= citaEntrega + tol : null;
+    const onTimeEntrega = llegadaEntrega !== null && citaEntrega !== null ? llegadaEntrega <= citaEntrega + tol : null;
     const onTime = onTimeCarga === null && onTimeEntrega === null ? null : (onTimeCarga ?? true) && (onTimeEntrega ?? true);
     return {
       s, marcas, horas,
       llegadaCarga, citaCarga, onTimeCarga, retrasoCargaMin: llegadaCarga !== null && citaCarga !== null ? Math.round((llegadaCarga - citaCarga) / 60000) : null,
-      llegadaEntrega: marcas.en_descarga ?? null, citaEntrega, onTimeEntrega,
-      retrasoEntregaMin: marcas.en_descarga !== undefined && citaEntrega !== null ? Math.round((marcas.en_descarga - citaEntrega) / 60000) : null,
+      llegadaEntrega, citaEntrega, onTimeEntrega,
+      retrasoEntregaMin: llegadaEntrega !== null && citaEntrega !== null ? Math.round((llegadaEntrega - citaEntrega) / 60000) : null,
       onTime,
     };
   });

@@ -20,7 +20,7 @@ export function deLocalMx(local: string) {
 export default function BitacoraEditor({ servicioId, registros, onCambio }: { servicioId: string; registros: any[]; onCambio: () => void }) {
   const supabase = createClient();
   const [edit, setEdit] = useState<Record<string, { created_at: string; estatus: string; comentario: string }>>({});
-  const [nuevo, setNuevo] = useState({ created_at: aLocalMx(new Date().toISOString()), estatus: "en_carga", comentario: "" });
+  const [nuevo, setNuevo] = useState({ created_at: aLocalMx(new Date().toISOString()), estatus: "llegada_carga", comentario: "" });
   const [ocupado, setOcupado] = useState("");
 
   const valor = (b: any) => edit[b.id] || { created_at: aLocalMx(b.created_at), estatus: b.estatus, comentario: b.comentario || "" };
