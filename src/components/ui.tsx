@@ -246,8 +246,7 @@ function MenuFiltro({ titulo, x, y, valores, filtro, onAplicar, onCerrar }: {
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onCerrar(); };
     const t = setTimeout(() => document.addEventListener("mousedown", fuera), 0);
     document.addEventListener("keydown", esc);
-    window.addEventListener("scroll", onCerrar, true);
-    return () => { clearTimeout(t); document.removeEventListener("mousedown", fuera); document.removeEventListener("keydown", esc); window.removeEventListener("scroll", onCerrar, true); };
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", fuera); document.removeEventListener("keydown", esc); };
   }, [onCerrar]);
 
   const visibles = lista.filter((v) => v.toLowerCase().includes(buscar.toLowerCase())).slice(0, 400);
