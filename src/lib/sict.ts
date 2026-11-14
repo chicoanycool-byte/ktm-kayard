@@ -42,7 +42,7 @@ export function partirPoblacion(nombre: string): { municipio: string; estado: nu
 const UA = "KTM-Kayard/1.0";
 
 const cuerpo = (campos: Record<string, string>) =>
-  new URLSearchParams({ tipo: "1", red: "simplificada", puntosIntermedios: "null", calculaRendimiento: "null", ...campos });
+  new URLSearchParams({ tipo: "1", red: "detallada", puntosIntermedios: "null", calculaRendimiento: "null", ...campos });
 
 // El sitio solo entrega el catálogo completo de puntos cuando hay sesión abierta,
 // así que primero se pide la página y se reutiliza su cookie.
