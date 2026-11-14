@@ -113,3 +113,11 @@ returns jsonb language sql stable security invoker as $$
     )
   );
 $$;
+
+-- Coordenadas y punto equivalente de la SICT para cada población (se llenan solas al cotizar)
+alter table public.poblaciones
+  add column if not exists lat numeric(9,6),
+  add column if not exists lon numeric(9,6),
+  add column if not exists sict_estado int,
+  add column if not exists sict_id text,
+  add column if not exists sict_nombre text;
