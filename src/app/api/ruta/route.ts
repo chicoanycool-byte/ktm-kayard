@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { consultarRuta, mejorNodo, nodosDeEstado, partirPoblacion } from "@/lib/sict";
+import { consultarRuta, mejorNodo, nodosDeEstado, nodosDeRuta, partirPoblacion } from "@/lib/sict";
 
 export const maxDuration = 60;
 
@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     const o = partirPoblacion(String(origen || "")), d = partirPoblacion(String(destino || ""));
     if (!o.estado || !d.estado) return NextResponse.json({ ok: false, error: "No reconocí el estado del origen o del destino" }, { status: 400 });
 
-    const [no, nd] = await Promise.all([nodosDeEstado(o.estado), nodosDeEstado(d.estado)]);
+    const pares = await nodosDeRuta(o.estado, d.estado);
+    const no = pares.origen, nd = pares.destino.length ? pares.destino : pares.origen;
     const po = nodoOrigen ? no.find((n) => n.codigo === nodoOrigen) : mejorNodo(o.municipio, no);
     const pd = nodoDestino ? nd.find((n) => n.codigo === nodoDestino) : mejorNodo(d.municipio, nd);
     if (!po || !pd) {

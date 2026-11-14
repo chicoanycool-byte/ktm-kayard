@@ -70,22 +70,36 @@ async function pedir(accion: string, campos: Record<string, string>) {
 }
 
 // El catálogo de puntos cambia muy poco: se guarda un rato en memoria
-const cacheNodos = new Map<number, { nodos: NodoSICT[]; expira: number }>();
+const cacheNodos = new Map<string, { nodos: ParNodos; expira: number }>();
 
 export type NodoSICT = { codigo: string; nombre: string };
+export type ParNodos = { origen: NodoSICT[]; destino: NodoSICT[] };
 
-// Puntos de la red federal que la SICT tiene cargados para un estado
-export async function nodosDeEstado(estado: number): Promise<NodoSICT[]> {
-  const guardado = cacheNodos.get(estado);
-  if (guardado && guardado.expira > Date.now()) return guardado.nodos;
-  const html = await pedir("cmdEscogeRuta", { edoOrigen: String(estado), ciudadOrigen: "0", edoDestino: "0", ciudadDestino: "0", vehiculos: "2" });
-  const sel = html.match(/name="ciudadOrigen"[\s\S]*?<\/select>/);
+const opciones = (html: string, campo: string): NodoSICT[] => {
+  const sel = html.match(new RegExp(`name="${campo}"[\\s\\S]*?</select>`));
   if (!sel) return [];
-  const nodos = [...sel[0].matchAll(/<option[^>]*value="(\d+)"[^>]*>([^<]*)</g)]
+  return [...sel[0].matchAll(/<option[^>]*value="(\d+)"[^>]*>([^<]*)</g)]
     .filter((m) => m[1] !== "0")
     .map((m) => ({ codigo: m[1], nombre: m[2].replace(/&nbsp;/g, " ").trim() }));
-  if (nodos.length) cacheNodos.set(estado, { nodos, expira: Date.now() + 12 * 3600 * 1000 });
+};
+
+// Puntos de la red federal que la SICT tiene para el estado de origen y el de destino.
+// Se piden juntos, igual que lo hace su propia página, porque así devuelve el catálogo completo.
+export async function nodosDeRuta(edoOrigen: number, edoDestino: number): Promise<ParNodos> {
+  const clave = `${edoOrigen}-${edoDestino}`;
+  const guardado = cacheNodos.get(clave);
+  if (guardado && guardado.expira > Date.now()) return guardado.nodos;
+  const html = await pedir("cmdEscogeRuta", {
+    edoOrigen: String(edoOrigen), ciudadOrigen: "0", edoDestino: String(edoDestino), ciudadDestino: "0", vehiculos: "2",
+  });
+  const nodos: ParNodos = { origen: opciones(html, "ciudadOrigen"), destino: opciones(html, "ciudadDestino") };
+  if (nodos.origen.length) cacheNodos.set(clave, { nodos, expira: Date.now() + 12 * 3600 * 1000 });
   return nodos;
+}
+
+// Un solo estado (para llenar la lista en pantalla)
+export async function nodosDeEstado(estado: number): Promise<NodoSICT[]> {
+  return (await nodosDeRuta(estado, estado)).origen;
 }
 
 // Elige el punto que mejor corresponde a un municipio
