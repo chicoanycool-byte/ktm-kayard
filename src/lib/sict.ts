@@ -64,6 +64,15 @@ async function cookieSesion(): Promise<string> {
   return cookie;
 }
 
+async function pedirGet(campos: Record<string, string>) {
+  const cookie = await cookieSesion();
+  const r = await fetch(`${BASE}?action=cmdEscogeRuta&${new URLSearchParams(campos)}`, {
+    cache: "no-store", headers: { ...CABECERAS, ...(cookie ? { cookie } : {}) },
+  });
+  if (!r.ok) throw new Error(`La SICT respondió ${r.status}`);
+  return new TextDecoder("iso-8859-1").decode(await r.arrayBuffer());
+}
+
 async function pedir(accion: string, campos: Record<string, string>) {
   const cookie = await cookieSesion();
   const r = await fetch(`${BASE}?action=${accion}`, {
@@ -95,9 +104,8 @@ export async function nodosDeRuta(edoOrigen: number, edoDestino: number): Promis
   const clave = `${edoOrigen}-${edoDestino}`;
   const guardado = cacheNodos.get(clave);
   if (guardado && guardado.expira > Date.now()) return guardado.nodos;
-  const html = await pedir("cmdEscogeRuta", {
-    edoOrigen: String(edoOrigen), ciudadOrigen: "0", edoDestino: String(edoDestino), ciudadDestino: "0", vehiculos: "2",
-  });
+  // El catálogo llega completo pidiendo la página con los estados en la liga (así responde con todos los puntos)
+  const html = await pedirGet({ edoOrigen: String(edoOrigen), edoDestino: String(edoDestino) });
   const nodos: ParNodos = { origen: opciones(html, "ciudadOrigen"), destino: opciones(html, "ciudadDestino") };
   if (nodos.origen.length) cacheNodos.set(clave, { nodos, expira: Date.now() + 12 * 3600 * 1000 });
   return nodos;
