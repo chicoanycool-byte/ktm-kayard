@@ -22,8 +22,6 @@ export type Cotizacion = {
 };
 
 type Pob = { id: string; nombre: string };
-type Tramo = { tramo: string; carretera: string; km: number; caseta: string; costo: number };
-type PuntoFaltante = { extremo: "origen" | "destino"; poblacion: string; estado: number; estado_nombre: string; opciones: { id: string; nombre: string }[] };
 type Cli = { id: string; nombre: string; contacto_nombre: string | null };
 
 const VEH: Record<string, string> = { "1": "Motocicleta", "2": "Automóvil", "5": "Pick Up", "9": "Camión 2 ejes", "10": "Camión 3 ejes", "11": "Camión 4 ejes", "12": "Camión 5 ejes", "13": "Camión 6 ejes", "14": "Camión 7 ejes", "15": "Camión 8 ejes", "16": "Camión 9 ejes" };
