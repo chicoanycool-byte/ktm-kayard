@@ -1,5 +1,20 @@
 import { NextResponse } from "next/server";
 import { consultarRuta, mejorNodo, nodosDeEstado, nodosDeRuta, partirPoblacion } from "@/lib/sict";
+import { createClient } from "@/lib/supabase/server";
+
+// El punto de la red federal que se eligió para cada población se guarda, para no volver a preguntarlo
+type Guardado = { sict_id: string | null; sict_nombre: string | null };
+async function leerGuardados(ids: string[]) {
+  if (!ids.length) return {} as Record<string, Guardado>;
+  const supabase = await createClient();
+  const { data } = await supabase.from("poblaciones").select("id, sict_id, sict_nombre").in("id", ids);
+  return Object.fromEntries((data || []).map((r) => [r.id, { sict_id: r.sict_id, sict_nombre: r.sict_nombre }])) as Record<string, Guardado>;
+}
+async function guardarNodo(id: string | undefined, estado: number, codigo: string, nombre: string) {
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("poblaciones").update({ sict_estado: estado, sict_id: codigo, sict_nombre: nombre }).eq("id", id);
+}
 
 export const maxDuration = 60;
 
@@ -18,14 +33,18 @@ export async function GET(req: Request) {
 // { origen: "El Salto, Jalisco", destino: "Tepatitlán, Jalisco", vehiculo: "12", nodoOrigen?, nodoDestino? }
 export async function POST(req: Request) {
   try {
-    const { origen, destino, vehiculo, nodoOrigen, nodoDestino } = await req.json();
+    const { origen, destino, vehiculo, nodoOrigen, nodoDestino, origenId, destinoId } = await req.json();
     const o = partirPoblacion(String(origen || "")), d = partirPoblacion(String(destino || ""));
     if (!o.estado || !d.estado) return NextResponse.json({ ok: false, error: "No reconocí el estado del origen o del destino" }, { status: 400 });
 
     const pares = await nodosDeRuta(o.estado, d.estado);
     const no = pares.origen, nd = pares.destino.length ? pares.destino : pares.origen;
-    const po = nodoOrigen ? no.find((n) => n.codigo === nodoOrigen) : mejorNodo(o.municipio, no);
-    const pd = nodoDestino ? nd.find((n) => n.codigo === nodoDestino) : mejorNodo(d.municipio, nd);
+    const guardados = await leerGuardados([origenId, destinoId].filter(Boolean) as string[]);
+    const previoO = guardados[origenId]?.sict_id, previoD = guardados[destinoId]?.sict_id;
+    const po = nodoOrigen ? no.find((n) => n.codigo === nodoOrigen)
+      : (previoO && no.find((n) => n.codigo === previoO)) || mejorNodo(o.municipio, no);
+    const pd = nodoDestino ? nd.find((n) => n.codigo === nodoDestino)
+      : (previoD && nd.find((n) => n.codigo === previoD)) || mejorNodo(d.municipio, nd);
     if (!po || !pd) {
       return NextResponse.json({
         ok: false, requiere_punto: true,
@@ -36,6 +55,8 @@ export async function POST(req: Request) {
     }
 
     const ruta = await consultarRuta({ edoOrigen: o.estado, ciudadOrigen: po.codigo, edoDestino: d.estado, ciudadDestino: pd.codigo, vehiculo: String(vehiculo || "12") });
+    // recordar los puntos usados para la próxima cotización de esta misma población
+    await Promise.all([guardarNodo(origenId, o.estado, po.codigo, po.nombre), guardarNodo(destinoId, d.estado, pd.codigo, pd.nombre)]);
     const exacto = { origen: po.nombre, destino: pd.nombre };
     return NextResponse.json({
       ok: true, ...ruta, punto: exacto,

@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
   // /api/combustible y /api/ruta solo consultan datos públicos (CRE y SICT) y se cachean, así que no piden sesión
-  const publica = path.startsWith("/login") || path.startsWith("/operador") || path.startsWith("/auth") || path === "/api/combustible" || path === "/api/ruta" || path === "/api/ruta/diagnostico";
+  const publica = path.startsWith("/login") || path.startsWith("/operador") || path.startsWith("/auth") || path === "/api/combustible" || path === "/api/ruta";
 
   if (!user && !publica) {
     const url = request.nextUrl.clone();

@@ -125,7 +125,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
     setCalcKm(true); setAvisoKm(""); setOficial(null);
     try {
       const r = await fetch("/api/ruta", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ origen, destino, vehiculo: u.sict_vehiculo, nodoOrigen: forzarO ?? nodoO ?? null, nodoDestino: forzarD ?? nodoD ?? null }) });
+        body: JSON.stringify({ origen, destino, origenId, destinoId, vehiculo: u.sict_vehiculo, nodoOrigen: forzarO ?? nodoO ?? null, nodoDestino: forzarD ?? nodoD ?? null }) });
       const j = await r.json();
       if (j.nodosOrigen) setNodos({ origen: j.nodosOrigen, destino: j.nodosDestino });
       if (j.ok) {

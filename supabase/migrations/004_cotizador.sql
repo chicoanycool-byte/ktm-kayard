@@ -113,3 +113,9 @@ returns jsonb language sql stable security invoker as $$
     )
   );
 $$;
+
+-- Punto de la red federal de la SICT que corresponde a cada población (se guarda al cotizar)
+alter table public.poblaciones
+  add column if not exists sict_estado int,
+  add column if not exists sict_id text,
+  add column if not exists sict_nombre text;
