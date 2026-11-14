@@ -39,7 +39,13 @@ export function partirPoblacion(nombre: string): { municipio: string; estado: nu
   return { municipio: mun, estado: e?.id ?? null };
 }
 
-const UA = "KTM-Kayard/1.0";
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36";
+const CABECERAS = {
+  "user-agent": UA,
+  "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "accept-language": "es-MX,es;q=0.9",
+  "referer": `${BASE}?action=cmdEscogeRuta`,
+};
 
 const cuerpo = (campos: Record<string, string>) =>
   new URLSearchParams({ tipo: "1", red: "detallada", puntosIntermedios: "null", calculaRendimiento: "null", ...campos });
@@ -49,7 +55,7 @@ const cuerpo = (campos: Record<string, string>) =>
 let sesion: { cookie: string; expira: number } | null = null;
 async function cookieSesion(): Promise<string> {
   if (sesion && sesion.expira > Date.now()) return sesion.cookie;
-  const r = await fetch(`${BASE}?action=cmdEscogeRuta`, { cache: "no-store", headers: { "user-agent": UA } });
+  const r = await fetch(`${BASE}?action=cmdEscogeRuta`, { cache: "no-store", headers: CABECERAS });
   const set = r.headers.get("set-cookie") || "";
   const m = set.match(/JSESSIONID=[^;]+/);
   await r.arrayBuffer();
@@ -62,7 +68,7 @@ async function pedir(accion: string, campos: Record<string, string>) {
   const cookie = await cookieSesion();
   const r = await fetch(`${BASE}?action=${accion}`, {
     method: "POST", body: cuerpo(campos), cache: "no-store",
-    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA, ...(cookie ? { cookie } : {}) },
+    headers: { "content-type": "application/x-www-form-urlencoded", ...CABECERAS, ...(cookie ? { cookie } : {}) },
   });
   if (!r.ok) throw new Error(`La SICT respondió ${r.status}`);
   // El sitio responde en ISO-8859-1
