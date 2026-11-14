@@ -39,30 +39,53 @@ export function partirPoblacion(nombre: string): { municipio: string; estado: nu
   return { municipio: mun, estado: e?.id ?? null };
 }
 
+const UA = "KTM-Kayard/1.0";
+
 const cuerpo = (campos: Record<string, string>) =>
-  new URLSearchParams({ tipo: "1", red: "simplificada", puntosIntermedios: "null", calculaRendimiento: "null", cmdEnviar: "Consultar", ...campos });
+  new URLSearchParams({ tipo: "1", red: "simplificada", puntosIntermedios: "null", calculaRendimiento: "null", ...campos });
+
+// El sitio solo entrega el catálogo completo de puntos cuando hay sesión abierta,
+// así que primero se pide la página y se reutiliza su cookie.
+let sesion: { cookie: string; expira: number } | null = null;
+async function cookieSesion(): Promise<string> {
+  if (sesion && sesion.expira > Date.now()) return sesion.cookie;
+  const r = await fetch(`${BASE}?action=cmdEscogeRuta`, { cache: "no-store", headers: { "user-agent": UA } });
+  const set = r.headers.get("set-cookie") || "";
+  const m = set.match(/JSESSIONID=[^;]+/);
+  await r.arrayBuffer();
+  const cookie = m ? m[0] : "";
+  sesion = { cookie, expira: Date.now() + 10 * 60 * 1000 };
+  return cookie;
+}
 
 async function pedir(accion: string, campos: Record<string, string>) {
+  const cookie = await cookieSesion();
   const r = await fetch(`${BASE}?action=${accion}`, {
-    method: "POST", body: cuerpo(campos),
-    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "KTM-Kayard/1.0" },
-    next: { revalidate: accion === "cmdEscogeRuta" ? 604800 : 86400 },
+    method: "POST", body: cuerpo(campos), cache: "no-store",
+    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA, ...(cookie ? { cookie } : {}) },
   });
   if (!r.ok) throw new Error(`La SICT respondió ${r.status}`);
   // El sitio responde en ISO-8859-1
   return new TextDecoder("iso-8859-1").decode(await r.arrayBuffer());
 }
 
+// El catálogo de puntos cambia muy poco: se guarda un rato en memoria
+const cacheNodos = new Map<number, { nodos: NodoSICT[]; expira: number }>();
+
 export type NodoSICT = { codigo: string; nombre: string };
 
 // Puntos de la red federal que la SICT tiene cargados para un estado
 export async function nodosDeEstado(estado: number): Promise<NodoSICT[]> {
+  const guardado = cacheNodos.get(estado);
+  if (guardado && guardado.expira > Date.now()) return guardado.nodos;
   const html = await pedir("cmdEscogeRuta", { edoOrigen: String(estado), ciudadOrigen: "0", edoDestino: "0", ciudadDestino: "0", vehiculos: "2" });
   const sel = html.match(/name="ciudadOrigen"[\s\S]*?<\/select>/);
   if (!sel) return [];
-  return [...sel[0].matchAll(/<option[^>]*value="(\d+)"[^>]*>([^<]*)</g)]
+  const nodos = [...sel[0].matchAll(/<option[^>]*value="(\d+)"[^>]*>([^<]*)</g)]
     .filter((m) => m[1] !== "0")
     .map((m) => ({ codigo: m[1], nombre: m[2].replace(/&nbsp;/g, " ").trim() }));
+  if (nodos.length) cacheNodos.set(estado, { nodos, expira: Date.now() + 12 * 3600 * 1000 });
+  return nodos;
 }
 
 // Elige el punto que mejor corresponde a un municipio
