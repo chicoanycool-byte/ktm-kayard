@@ -10,6 +10,9 @@ import {
 } from "@/lib/cotizador";
 import { descargarBlob, generarCartaCotizacion } from "@/lib/cartaCotizacion";
 
+type NodoSICT = { codigo: string; nombre: string };
+type RutaOficial = { km: number; horas: string; casetas: number; detalle: { nombre: string; costo: number }[]; punto: { origen: string; destino: string }; aproximado: boolean; fuente: string; nodoOrigen: string; nodoDestino: string };
+
 export type Cotizacion = {
   id: string; folio: string; fecha: string; vigencia_dias: number; cliente_id: string | null; cliente_nombre: string; contacto: string | null;
   origen_id: string | null; destino_id: string | null; origen: string; destino: string; tipo_viaje: TipoViaje; unidad: Unidad; unidad_descripcion: string | null;
@@ -20,6 +23,8 @@ export type Cotizacion = {
 
 type Pob = { id: string; nombre: string };
 type Cli = { id: string; nombre: string; contacto_nombre: string | null };
+
+const VEH: Record<string, string> = { "1": "Motocicleta", "2": "Automóvil", "5": "Pick Up", "9": "Camión 2 ejes", "10": "Camión 3 ejes", "11": "Camión 4 ejes", "12": "Camión 5 ejes", "13": "Camión 6 ejes", "14": "Camión 7 ejes", "15": "Camión 8 ejes", "16": "Camión 9 ejes" };
 
 const hoy = () => new Date(Date.now() - 6 * 3600e3).toISOString().slice(0, 10);
 const num = (v: string) => (v === "" ? 0 : Number(v.replace(/,/g, "")) || 0);
@@ -107,24 +112,41 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const ref = referenciaKTM(comparativo);
   const difRef = ref && ref.costo > 0 ? ((d.tarifa_proveedor - ref.costo) / ref.costo) * 100 : null;
 
-  // ── Distancia por Google (si hay clave)
+  // ── Kilómetros y casetas oficiales (SICT · Traza tu ruta)
   const [calcKm, setCalcKm] = useState(false);
   const [avisoKm, setAvisoKm] = useState("");
-  const calcularRuta = async () => {
+  const [oficial, setOficial] = useState<RutaOficial | null>(null);
+  const [nodos, setNodos] = useState<{ origen: NodoSICT[]; destino: NodoSICT[] }>({ origen: [], destino: [] });
+  const [nodoO, setNodoO] = useState("");
+  const [nodoD, setNodoD] = useState("");
+
+  const buscarRuta = async (forzarO?: string, forzarD?: string) => {
     if (!origen || !destino) return;
-    setCalcKm(true); setAvisoKm("");
+    setCalcKm(true); setAvisoKm(""); setOficial(null);
     try {
-      const r = await fetch("/api/distancia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origen, destino }) });
+      const r = await fetch("/api/ruta", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ origen, destino, vehiculo: u.sict_vehiculo, nodoOrigen: forzarO ?? nodoO ?? null, nodoDestino: forzarD ?? nodoD ?? null }) });
       const j = await r.json();
+      if (j.nodosOrigen) setNodos({ origen: j.nodosOrigen, destino: j.nodosDestino });
       if (j.ok) {
+        setOficial(j);
+        setNodoO(j.nodoOrigen); setNodoD(j.nodoDestino);
         setKm(String(j.km));
-        if (j.casetas) setCasetas(String(Math.round(j.casetas)));
+        setCasetas(String(Math.round(j.casetas)));
         setTipoViaje(tipoViajeSugerido(j.km));
-        setAvisoKm(j.nota || "");
-      } else setAvisoKm(j.error);
+        if (j.aproximado) setAvisoKm(`Se usaron los puntos de la red federal más cercanos: ${j.punto.origen} → ${j.punto.destino}. Ajusta los km si hace falta.`);
+      } else {
+        setAvisoKm(j.error);
+        if (j.requiere_punto) { setNodoO(j.sugerenciaOrigen || ""); setNodoD(j.sugerenciaDestino || ""); }
+      }
     } catch (e) { setAvisoKm(String(e)); }
     setCalcKm(false);
   };
+
+  // al cambiar la ruta o la unidad, lo consultado deja de aplicar
+  const rutaClave = `${origenId}|${destinoId}|${unidad}`;
+  const [claveRuta, setClaveRuta] = useState(rutaClave);
+  if (claveRuta !== rutaClave) { setClaveRuta(rutaClave); if (oficial) { setOficial(null); setNodoO(""); setNodoD(""); setAvisoKm(""); } }
 
   // ── Guardar y carta
   const [guardando, setGuardando] = useState(false);
@@ -234,7 +256,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <Campo label="Kilómetros (un sentido)">
               <div style={{ display: "flex", gap: 6 }}>
                 <input value={km} onChange={(e) => { setKm(e.target.value); if (num(e.target.value) > 0) setTipoViaje(tipoViajeSugerido(num(e.target.value))); }} inputMode="decimal" placeholder="0" style={inputStyle} />
-                <Btn small variante="secundario" onClick={calcularRuta} disabled={!origen || !destino || calcKm}>{calcKm ? "…" : "🗺️"}</Btn>
+                <Btn small variante="secundario" onClick={() => buscarRuta()} disabled={!origen || !destino || calcKm}>{calcKm ? "…" : "🗺️"}</Btn>
               </div>
             </Campo>
             <Campo label="Casetas ida (MXN)">
@@ -270,7 +292,39 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
               <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="No aparecen en la carta" style={inputStyle} />
             </Campo>
           </Grid>
-          {avisoKm && <p style={{ fontSize: 12, color: avisoKm.includes("Sin clave") ? C.muted : C.blue, marginTop: 8 }}>{avisoKm}</p>}
+          <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <Btn small variante="secundario" onClick={() => buscarRuta()} disabled={!origen || !destino || calcKm}>
+                {calcKm ? "Consultando la SICT…" : "🗺️ Buscar km y casetas oficiales"}
+              </Btn>
+              {oficial && <span style={{ fontSize: 13, color: C.text }}>
+                <b style={{ color: "white" }}>{oficial.km} km</b> · {oficial.horas} h · casetas <b style={{ color: C.amber }}>{money(oficial.casetas)}</b> ({u.nombre} → {VEH[u.sict_vehiculo] || u.sict_vehiculo})
+              </span>}
+            </div>
+            {avisoKm && <p style={{ fontSize: 12, color: C.blue, margin: "8px 0 0" }}>{avisoKm}</p>}
+            {nodos.origen.length > 0 && (
+              <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <Campo label="Punto de la red federal (origen)">
+                  <select value={nodoO} onChange={(e) => { setNodoO(e.target.value); buscarRuta(e.target.value, nodoD); }} style={{ ...inputStyle, minWidth: 200 }}>
+                    <option value="">—</option>
+                    {nodos.origen.map((n) => <option key={n.codigo} value={n.codigo}>{n.nombre}</option>)}
+                  </select>
+                </Campo>
+                <Campo label="Punto de la red federal (destino)">
+                  <select value={nodoD} onChange={(e) => { setNodoD(e.target.value); buscarRuta(nodoO, e.target.value); }} style={{ ...inputStyle, minWidth: 200 }}>
+                    <option value="">—</option>
+                    {nodos.destino.map((n) => <option key={n.codigo} value={n.codigo}>{n.nombre}</option>)}
+                  </select>
+                </Campo>
+              </div>
+            )}
+            {oficial && oficial.detalle.length > 0 && (
+              <div style={{ marginTop: 10, fontSize: 12, color: C.muted }}>
+                Casetas: {oficial.detalle.map((c: { nombre: string; costo: number }) => `${c.nombre} ${money(c.costo)}`).join(" · ")}
+              </div>
+            )}
+            {oficial && <p style={{ fontSize: 11, color: C.muted, margin: "6px 0 0" }}>{oficial.fuente}</p>}
+          </div>
         </Card>
 
         {/* ── Resultado */}

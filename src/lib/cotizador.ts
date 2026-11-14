@@ -20,6 +20,7 @@ export type ParamUnidad = {
   costo_fijo_diario: number;   // suma de depreciación, seguros, permisos, GPS, IMSS, administración, etc.
   hora_extra: number;          // $ por hora extra (carta)
   estadia: number;             // $ por día de estadía (carta)
+  sict_vehiculo: string;       // tipo de vehículo en "Traza tu ruta" de la SICT (decide la tarifa de caseta)
   equivalencias_ktm: string[]; // nombres de tipos de unidad en KTM que corresponden a esta unidad
 };
 
@@ -60,11 +61,11 @@ export const CONFIG_DEFAULT: ConfigCotizador = {
     full: m(0.6, 0.65, 0.7),
   },
   unidades: {
-    camioneta_1_5: { nombre: "Camioneta 1.5 ton", descripcion_carta: "Camioneta 1.5 ton caja seca", tarimas: "4 a piso", combustible: "gasolina", rendimiento: 6.5, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.1, operador_local: 300, operador_regional_km: 1.5, operador_foraneo_km: 1.2, costo_fijo_diario: 775, hora_extra: 100, estadia: 1200, equivalencias_ktm: ["1.5 tons", "1,5 tons"] },
-    camioneta_3_5: { nombre: "Camioneta 3.5 ton", descripcion_carta: "Camioneta 3.5 ton caja seca", tarimas: "6 a piso", combustible: "gasolina", rendimiento: 4, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.55, operador_local: 400, operador_regional_km: 2.2, operador_foraneo_km: 1.8, costo_fijo_diario: 1105, hora_extra: 120, estadia: 1500, equivalencias_ktm: ["3.5 tons", "3,5 tons"] },
-    torton: { nombre: "Torton", descripcion_carta: "Torton caja seca", tarimas: "14 a piso", combustible: "diesel", rendimiento: 3, velocidad: 50, horas_fijas: 8, mantenimiento_km: 3, operador_local: 500, operador_regional_km: 3.5, operador_foraneo_km: 2.8, costo_fijo_diario: 1945, hora_extra: 150, estadia: 2000, equivalencias_ktm: ["Torton", "Rabon", "Rabón"] },
-    trailer: { nombre: "Trailer", descripcion_carta: "Trailer caja seca 53 pies", tarimas: "24 a piso", combustible: "diesel", rendimiento: 2, velocidad: 50, horas_fijas: 16, mantenimiento_km: 4.25, operador_local: 600, operador_regional_km: 4.5, operador_foraneo_km: 3.8, costo_fijo_diario: 3537.22, hora_extra: 150, estadia: 2300, equivalencias_ktm: ["Trailer"] },
-    full: { nombre: "Full", descripcion_carta: "Full (2 cajas secas 40 pies)", tarimas: "48 a piso", combustible: "diesel", rendimiento: 1.8, velocidad: 40, horas_fijas: 18, mantenimiento_km: 6.5, operador_local: 800, operador_regional_km: 6, operador_foraneo_km: 5.5, costo_fijo_diario: 4207.22, hora_extra: 200, estadia: 3000, equivalencias_ktm: ["Full"] },
+    camioneta_1_5: { nombre: "Camioneta 1.5 ton", descripcion_carta: "Camioneta 1.5 ton caja seca", tarimas: "4 a piso", combustible: "gasolina", rendimiento: 6.5, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.1, operador_local: 300, operador_regional_km: 1.5, operador_foraneo_km: 1.2, costo_fijo_diario: 775, hora_extra: 100, estadia: 1200, sict_vehiculo: "5", equivalencias_ktm: ["1.5 tons", "1,5 tons"] },
+    camioneta_3_5: { nombre: "Camioneta 3.5 ton", descripcion_carta: "Camioneta 3.5 ton caja seca", tarimas: "6 a piso", combustible: "gasolina", rendimiento: 4, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.55, operador_local: 400, operador_regional_km: 2.2, operador_foraneo_km: 1.8, costo_fijo_diario: 1105, hora_extra: 120, estadia: 1500, sict_vehiculo: "9", equivalencias_ktm: ["3.5 tons", "3,5 tons"] },
+    torton: { nombre: "Torton", descripcion_carta: "Torton caja seca", tarimas: "14 a piso", combustible: "diesel", rendimiento: 3, velocidad: 50, horas_fijas: 8, mantenimiento_km: 3, operador_local: 500, operador_regional_km: 3.5, operador_foraneo_km: 2.8, costo_fijo_diario: 1945, hora_extra: 150, estadia: 2000, sict_vehiculo: "10", equivalencias_ktm: ["Torton", "Rabon", "Rabón"] },
+    trailer: { nombre: "Trailer", descripcion_carta: "Trailer caja seca 53 pies", tarimas: "24 a piso", combustible: "diesel", rendimiento: 2, velocidad: 50, horas_fijas: 16, mantenimiento_km: 4.25, operador_local: 600, operador_regional_km: 4.5, operador_foraneo_km: 3.8, costo_fijo_diario: 3537.22, hora_extra: 150, estadia: 2300, sict_vehiculo: "12", equivalencias_ktm: ["Trailer"] },
+    full: { nombre: "Full", descripcion_carta: "Full (2 cajas secas 40 pies)", tarimas: "48 a piso", combustible: "diesel", rendimiento: 1.8, velocidad: 40, horas_fijas: 18, mantenimiento_km: 6.5, operador_local: 800, operador_regional_km: 6, operador_foraneo_km: 5.5, costo_fijo_diario: 4207.22, hora_extra: 200, estadia: 3000, sict_vehiculo: "16", equivalencias_ktm: ["Full"] },
   },
   condiciones: [
     "Tarifa aplica por viaje sencillo, ruta {ruta}.",
