@@ -65,6 +65,7 @@ export const MENU: MenuGrupo[] = [
       { href: "/clientes", label: "Clientes", icon: "👥", roles: ["admin", "direccion", "ventas", "operaciones"] },
       { href: "/puntos", label: "Clientes carga / descarga", icon: "📍", roles: ["admin", "direccion", "ventas", "operaciones"] },
       { href: "/tarifas/venta", label: "Tarifas de venta", icon: "💰", roles: ["admin", "direccion", "ventas"] },
+      { href: "/cotizador", label: "Cotizador", icon: "🧮", roles: ["admin", "direccion", "ventas"] },
     ],
   },
   {
