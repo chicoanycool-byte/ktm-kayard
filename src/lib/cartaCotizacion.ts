@@ -35,9 +35,9 @@ const fechaLarga = (iso: string) => {
 };
 const t = (text: string, o: { bold?: boolean; size?: number; color?: string } = {}) => new TextRun({ text, font: FONT, size: o.size ?? 20, bold: o.bold, color: o.color });
 const p = (runs: TextRun[] | string, o: { align?: (typeof AlignmentType)[keyof typeof AlignmentType]; after?: number; before?: number; bold?: boolean; size?: number; color?: string } = {}) =>
-  new Paragraph({ alignment: o.align, spacing: { after: o.after ?? 120, before: o.before ?? 0, line: 276 }, children: typeof runs === "string" ? [t(runs, { bold: o.bold, size: o.size, color: o.color })] : runs });
+  new Paragraph({ alignment: o.align, spacing: { after: o.after ?? 110, before: o.before ?? 0, line: 268 }, children: typeof runs === "string" ? [t(runs, { bold: o.bold, size: o.size, color: o.color })] : runs });
 const celda = (children: Paragraph[], width: number, o: { fill?: string; vAlign?: boolean } = {}) =>
-  new TableCell({ children, width: { size: width, type: WidthType.DXA }, borders: marco, verticalAlign: o.vAlign ? VerticalAlign.CENTER : undefined, margins: { top: 60, bottom: 60, left: 100, right: 100 }, shading: o.fill ? { type: ShadingType.CLEAR, fill: o.fill, color: "auto" } : undefined });
+  new TableCell({ children, width: { size: width, type: WidthType.DXA }, borders: marco, verticalAlign: o.vAlign ? VerticalAlign.CENTER : undefined, margins: { top: 45, bottom: 45, left: 100, right: 100 }, shading: o.fill ? { type: ShadingType.CLEAR, fill: o.fill, color: "auto" } : undefined });
 
 export async function generarCartaCotizacion(d: DatosCarta): Promise<Blob> {
   const logo = await fetch("/logo-bonyard.png").then((r) => r.arrayBuffer());
@@ -107,7 +107,7 @@ export async function generarCartaCotizacion(d: DatosCarta): Promise<Blob> {
         tarifas,
         p(`${varios ? "Tarifas expresadas" : "Tarifa expresada"} en pesos mexicanos (MXN), antes de IVA. Hora extra y estadía aplican una vez agotadas las ${d.cfg.horas_libres_carga} horas libres de carga y las ${d.cfg.horas_libres_descarga} horas libres de descarga.`, { size: 15, color: "595959", before: 80 }),
         p("Condiciones Comerciales", { bold: true, color: NAVY, before: 120 }),
-        ...d.condiciones.map((c) => new Paragraph({ numbering: { reference: "vinetas", level: 0 }, spacing: { after: 60, line: 264 }, children: [t(c, { size: 16 })] })),
+        ...d.condiciones.map((c) => new Paragraph({ numbering: { reference: "vinetas", level: 0 }, spacing: { after: 36, line: 248 }, children: [t(c, { size: 16 })] })),
         p("Quedamos atentos a sus comentarios y a su disposición para coordinar el inicio de operaciones.", { size: 16, before: 120 }),
         p("Atentamente,", { before: 200 }),
         p(e.firma, { bold: true, after: 0 }),
