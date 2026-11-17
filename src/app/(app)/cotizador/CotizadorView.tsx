@@ -18,10 +18,14 @@ export type Cotizacion = {
   origen_id: string | null; destino_id: string | null; origen: string; destino: string; tipo_viaje: TipoViaje; unidad: Unidad; unidad_descripcion: string | null;
   tarimas: string | null; km: number; retorno_vacio: boolean; casetas: number; personas: number; precio_combustible: number | null; combustible_fuente: string | null;
   desglose: Desglose; costo_operativo: number; margen_proveedor: number; tarifa_proveedor: number; margen_empresa: number; tarifa_cliente: number;
-  hora_extra: number; estadia: number; comparativo: ComparativoKTM | null; condiciones: string[]; notas: string | null; estatus: string; created_at: string;
+  hora_extra: number; estadia: number; destinos: LineaCotizacion[] | null; comparativo: ComparativoKTM | null; condiciones: string[]; notas: string | null; estatus: string; created_at: string;
 };
 
 type Pob = { id: string; nombre: string };
+export type LineaCotizacion = {
+  punto: string; destino: string; destino_id: string | null; tipo_viaje: TipoViaje | null;
+  km: number; casetas: number; costo_operativo: number; tarifa_proveedor: number; tarifa_cliente: number; fija: boolean;
+};
 type Cli = { id: string; nombre: string; contacto_nombre: string | null };
 
 const VEH: Record<string, string> = { "1": "Motocicleta", "2": "Automóvil", "5": "Pick Up", "9": "Camión 2 ejes", "10": "Camión 3 ejes", "11": "Camión 4 ejes", "12": "Camión 5 ejes", "13": "Camión 6 ejes", "14": "Camión 7 ejes", "15": "Camión 8 ejes", "16": "Camión 9 ejes" };
@@ -148,37 +152,62 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const [claveRuta, setClaveRuta] = useState(rutaClave);
   if (claveRuta !== rutaClave) { setClaveRuta(rutaClave); if (oficial) { setOficial(null); setNodoO(""); setNodoD(""); setAvisoKm(""); } }
 
+  // ── Varios destinos en una misma cotización
+  const [lineas, setLineas] = useState<LineaCotizacion[]>([]);
+  const [punto, setPunto] = useState("");
+  const [tarifaFija, setTarifaFija] = useState("");
+
+  const agregarDestino = () => {
+    if (!destinoId) return;
+    const fija = num(tarifaFija) > 0;
+    setLineas((l) => [...l, {
+      punto: punto.trim(), destino, destino_id: destinoId,
+      tipo_viaje: fija ? null : tipoViaje, km: fija ? 0 : num(km), casetas: fija ? 0 : num(casetas),
+      costo_operativo: fija ? 0 : d.costo_operativo, tarifa_proveedor: fija ? 0 : d.tarifa_proveedor,
+      tarifa_cliente: fija ? num(tarifaFija) : d.tarifa_cliente, fija,
+    }]);
+    setPunto(""); setTarifaFija(""); setDestinoId(""); setKm(""); setCasetas("");
+  };
+  const quitarDestino = (i: number) => setLineas((l) => l.filter((_, k) => k !== i));
+
   // ── Guardar y carta
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [detalle, setDetalle] = useState<Cotizacion | null>(null);
-  const listo = nombreCliente && origenId && destinoId && num(km) > 0;
+  const listo = !!nombreCliente && !!origenId && (lineas.length > 0 || (!!destinoId && num(km) > 0));
 
   const condiciones = useMemo(() => condicionesTexto(cfg, { ruta, vigencia: cfg.vigencia_dias }), [cfg, ruta]);
 
   const guardar = async () => {
     if (!listo) return;
     setGuardando(true); setError("");
+    const multi = lineas.length > 0;
+    const p1 = lineas[0];
     const fila = {
       fecha: hoy(), vigencia_dias: cfg.vigencia_dias, cliente_id: clienteId || null, cliente_nombre: nombreCliente, contacto: contacto || null,
-      origen_id: origenId, destino_id: destinoId, origen, destino, tipo_viaje: tipoViaje, unidad, unidad_descripcion: descUnidad, tarimas,
-      km: num(km), retorno_vacio: retorno, casetas: num(casetas), personas: num(personas) || 1,
+      origen_id: origenId, destino_id: multi ? p1.destino_id : destinoId, origen,
+      destino: multi ? (lineas.length === 1 ? p1.destino : `${lineas.length} destinos`) : destino,
+      tipo_viaje: multi ? (p1.tipo_viaje || "Local") : tipoViaje, unidad, unidad_descripcion: descUnidad, tarimas,
+      destinos: multi ? lineas : [],
+      km: multi ? p1.km : num(km), retorno_vacio: retorno, casetas: multi ? p1.casetas : num(casetas), personas: num(personas) || 1,
       precio_combustible: precio, combustible_fuente: precioManual !== "" ? "Capturado a mano" : combustible?.fuente || cfg.combustible.fuente,
-      desglose: d, costo_operativo: d.costo_operativo, margen_proveedor: d.margen_proveedor, tarifa_proveedor: d.tarifa_proveedor,
-      margen_empresa: d.margen_empresa, tarifa_cliente: d.tarifa_cliente, hora_extra: u.hora_extra, estadia: u.estadia,
+      desglose: d, costo_operativo: multi ? p1.costo_operativo : d.costo_operativo, margen_proveedor: d.margen_proveedor,
+      tarifa_proveedor: multi ? p1.tarifa_proveedor : d.tarifa_proveedor,
+      margen_empresa: d.margen_empresa, tarifa_cliente: multi ? p1.tarifa_cliente : d.tarifa_cliente, hora_extra: u.hora_extra, estadia: u.estadia,
       comparativo: comp, condiciones, notas: notas || null,
     };
     const { data, error: e } = await supabase.from("cotizaciones").insert(fila).select().single();
     if (e) setError(e.message);
-    else { setCotizaciones((c) => [data as Cotizacion, ...c]); setDetalle(data as Cotizacion); }
+    else { setCotizaciones((c) => [data as Cotizacion, ...c]); setDetalle(data as Cotizacion); setLineas([]); }
     setGuardando(false);
   };
 
   const carta = useCallback(async (c: Cotizacion) => {
     const blob = await generarCartaCotizacion({
-      folio: c.folio, fecha: c.fecha, cliente: c.cliente_nombre, contacto: c.contacto, ruta: `${c.origen} → ${c.destino}`,
+      folio: c.folio, fecha: c.fecha, cliente: c.cliente_nombre, contacto: c.contacto, ruta: (c.destinos || []).length > 1 ? c.origen : `${c.origen} → ${c.destino}`,
       unidad_descripcion: c.unidad_descripcion || cfg.unidades[c.unidad]?.descripcion_carta || c.unidad,
       tarimas: c.tarimas || "", tarifa: Number(c.tarifa_cliente), hora_extra: Number(c.hora_extra), estadia: Number(c.estadia),
+      lineas: (c.destinos || []).map((l) => ({ punto: l.punto, destino: l.destino, tarifa: Number(l.tarifa_cliente) })),
       condiciones: c.condiciones?.length ? c.condiciones : condicionesTexto(cfg, { ruta: `${c.origen} → ${c.destino}`, vigencia: c.vigencia_dias }),
       cfg,
     });
@@ -288,6 +317,17 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <Campo label={`Margen ${cfg.empresa.nombre.split(" ")[0]} % (base ${Math.round(cfg.margenes[unidad][tipoViaje].empresa * 100)})`}>
               <input value={ajusteEmp} onChange={(e) => setAjusteEmp(e.target.value)} placeholder={String(Math.round(cfg.margenes[unidad][tipoViaje].empresa * 100))} inputMode="decimal" style={inputStyle} />
             </Campo>
+            <Campo label="Punto de entrega (aparece en la carta)" span={2}>
+              <input value={punto} onChange={(e) => setPunto(e.target.value)} placeholder="Nombre de la tienda, cedis o cliente final" style={inputStyle} />
+            </Campo>
+            <Campo label="Tarifa fija (zona metropolitana u otra ya acordada)">
+              <input value={tarifaFija} onChange={(e) => setTarifaFija(e.target.value)} inputMode="decimal" placeholder="Déjalo vacío para calcularla" style={inputStyle} />
+            </Campo>
+            <Campo label="&nbsp;">
+              <Btn variante="secundario" onClick={agregarDestino} disabled={!destinoId || (!tarifaFija && num(km) <= 0)} style={{ width: "100%" }}>
+                ➕ Agregar destino a la cotización
+              </Btn>
+            </Campo>
             <Campo label="Notas internas" span={2}>
               <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="No aparecen en la carta" style={inputStyle} />
             </Campo>
@@ -373,10 +413,33 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             )}
           </Card>
 
+          {lineas.length > 0 && (
+            <Card style={{ backgroundColor: C.card2 }}>
+              <p style={{ margin: "0 0 0.5rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>
+                DESTINOS DE ESTA COTIZACIÓN ({lineas.length})
+              </p>
+              {lineas.map((l, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "0.35rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <b style={{ color: "white" }}>{l.punto || l.destino}</b>
+                    <span style={{ color: C.muted }}> · {l.destino}{l.fija ? " · tarifa fija" : ` · ${l.km} km`}</span>
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                    <b style={{ color: C.amber }}>{money(l.tarifa_cliente)}</b>
+                    <button onClick={() => quitarDestino(i)} title="Quitar" style={{ background: "none", border: "none", color: C.red, cursor: "pointer", fontSize: 15 }}>✕</button>
+                  </span>
+                </div>
+              ))}
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: C.muted }}>
+                La carta saldrá con una fila por destino. Agrega los que falten y luego guarda.
+              </p>
+            </Card>
+          )}
+
           <Btn onClick={guardar} disabled={!listo || guardando} style={{ width: "100%", padding: "0.75rem" }}>
-            {guardando ? "Guardando…" : "Guardar cotización y generar carta"}
+            {guardando ? "Guardando…" : lineas.length > 1 ? `Guardar cotización con ${lineas.length} destinos` : "Guardar cotización y generar carta"}
           </Btn>
-          {!listo && <p style={{ fontSize: 12, color: C.muted, margin: 0, textAlign: "center" }}>Falta cliente, origen, destino o kilómetros.</p>}
+          {!listo && <p style={{ fontSize: 12, color: C.muted, margin: 0, textAlign: "center" }}>Falta el cliente, el origen, o un destino con kilómetros o tarifa fija.</p>}
           {error && <p style={{ fontSize: 13, color: C.red, margin: 0 }}>{error}</p>}
         </div>
       </div>
@@ -390,9 +453,11 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
               <Td fuerte>{c.folio}</Td>
               <Td>{fecha(c.fecha)}</Td>
               <Td>{c.cliente_nombre}</Td>
-              <Td>{c.origen} → {c.destino}</Td>
+              <Td>{(c.destinos || []).length > 1 ? `${c.origen} → ${c.destinos!.length} destinos` : `${c.origen} → ${c.destino}`}</Td>
               <Td>{cfg.unidades[c.unidad]?.nombre || c.unidad}</Td>
-              <Td fuerte>{money(c.tarifa_cliente)}</Td>
+              <Td fuerte>{(c.destinos || []).length > 1
+                ? `${money(Math.min(...c.destinos!.map((l) => Number(l.tarifa_cliente))))} – ${money(Math.max(...c.destinos!.map((l) => Number(l.tarifa_cliente))))}`
+                : money(c.tarifa_cliente)}</Td>
               <Td><span style={{ color: c.estatus === "aceptada" ? C.green : c.estatus === "rechazada" ? C.red : C.amber, fontWeight: 700, fontSize: 12, textTransform: "uppercase" }}>{c.estatus}</span></Td>
               <Td><span onClick={(e) => e.stopPropagation()}><Btn small variante="secundario" onClick={() => carta(c)}>📄 Word</Btn></span></Td>
             </Tr>
@@ -416,6 +481,17 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <Dato label="Hora extra" valor={money(detalle.hora_extra)} />
             <Dato label="Estadía" valor={money(detalle.estadia)} />
           </Grid>
+          {(detalle.destinos || []).length > 1 && (
+            <div style={{ marginTop: 14 }}>
+              <p style={{ margin: "0 0 6px", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>DESTINOS ({detalle.destinos!.length})</p>
+              {detalle.destinos!.map((l, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 13 }}>
+                  <span>{l.punto || "—"} <span style={{ color: C.muted }}>· {l.destino}{l.fija ? " · tarifa fija" : ` · ${l.km} km · casetas ${money(l.casetas)}`}</span></span>
+                  <b style={{ color: C.amber, whiteSpace: "nowrap" }}>{money(l.tarifa_cliente)}</b>
+                </div>
+              ))}
+            </div>
+          )}
           {detalle.notas && <p style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>Notas: {detalle.notas}</p>}
           <p style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>Precio de combustible: {detalle.combustible_fuente}</p>
           <div style={{ display: "flex", gap: 8, marginTop: "1.2rem", flexWrap: "wrap" }}>

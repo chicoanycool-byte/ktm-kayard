@@ -5,6 +5,8 @@ import {
 import { money } from "./format";
 import type { ConfigCotizador } from "./cotizador";
 
+export type LineaCarta = { punto?: string | null; destino: string; tarifa: number };
+
 export type DatosCarta = {
   folio: string;
   fecha: string;             // YYYY-MM-DD
@@ -17,9 +19,11 @@ export type DatosCarta = {
   hora_extra: number;
   estadia: number;
   condiciones: string[];
+  lineas?: LineaCarta[];   // cuando la cotización lleva varios destinos
   cfg: ConfigCotizador;
 };
 
+type Align = (typeof AlignmentType)[keyof typeof AlignmentType];
 const FONT = "Aptos";
 const NAVY = "1F3864";
 const bordes = { style: BorderStyle.SINGLE, size: 6, color: "000000" } as const;
@@ -51,19 +55,34 @@ export async function generarCartaCotizacion(d: DatosCarta): Promise<Blob> {
   });
 
   const th = (txt: string, w: number) => celda([p(txt, { align: AlignmentType.CENTER, bold: true, color: "FFFFFF", after: 0 })], w, { fill: NAVY, vAlign: true });
-  type Align = (typeof AlignmentType)[keyof typeof AlignmentType];
-const td = (txt: string, w: number, align: Align = AlignmentType.LEFT, bold = false) => celda([p(txt, { align, bold, after: 0 })], w, { vAlign: true });
-  const tarifas = new Table({
-    columnWidths: [3000, 1900, 1700, 1500, 1710],
-    width: { size: 9810, type: WidthType.DXA },
-    rows: [
-      new TableRow({ tableHeader: true, children: [th("Tipo de unidad", 3000), th("Cap. Tarimas", 1900), th("Tarifa", 1700), th("Hora extra", 1500), th("Estadía / día", 1710)] }),
-      new TableRow({ children: [
-        td(d.unidad_descripcion, 3000), td(d.tarimas, 1900, AlignmentType.CENTER), td(money(d.tarifa), 1700, AlignmentType.CENTER, true),
-        td(money(d.hora_extra), 1500, AlignmentType.RIGHT), td(money(d.estadia), 1710, AlignmentType.RIGHT),
-      ] }),
-    ],
-  });
+  const td = (txt: string, w: number, align: Align = AlignmentType.LEFT, bold = false, fill?: string) =>
+    celda([p(txt, { align, bold, after: 0 })], w, { vAlign: true, fill });
+
+  const varios = (d.lineas?.length || 0) > 1;
+  const tarifas = varios
+    ? new Table({
+        columnWidths: [4200, 3200, 2410],
+        width: { size: 9810, type: WidthType.DXA },
+        rows: [
+          new TableRow({ tableHeader: true, children: [th("Punto de entrega", 4200), th("Destino", 3200), th("Tarifa por viaje", 2410)] }),
+          ...d.lineas!.map((l, i) => new TableRow({ children: [
+            td(l.punto || "—", 4200, AlignmentType.LEFT, false, i % 2 ? "F4F6FA" : undefined),
+            td(l.destino, 3200, AlignmentType.LEFT, false, i % 2 ? "F4F6FA" : undefined),
+            td(money(l.tarifa), 2410, AlignmentType.RIGHT, true, i % 2 ? "F4F6FA" : undefined),
+          ] })),
+        ],
+      })
+    : new Table({
+        columnWidths: [3000, 1900, 1700, 1500, 1710],
+        width: { size: 9810, type: WidthType.DXA },
+        rows: [
+          new TableRow({ tableHeader: true, children: [th("Tipo de unidad", 3000), th("Cap. Tarimas", 1900), th("Tarifa", 1700), th("Hora extra", 1500), th("Estadía / día", 1710)] }),
+          new TableRow({ children: [
+            td(d.unidad_descripcion, 3000), td(d.tarimas, 1900, AlignmentType.CENTER), td(money(d.tarifa), 1700, AlignmentType.CENTER, true),
+            td(money(d.hora_extra), 1500, AlignmentType.RIGHT), td(money(d.estadia), 1710, AlignmentType.RIGHT),
+          ] }),
+        ],
+      });
 
   const doc = new Document({
     creator: e.nombre,
@@ -83,9 +102,10 @@ const td = (txt: string, w: number, align: Align = AlignmentType.LEFT, bold = fa
         p(`Reciba un cordial saludo de parte de ${e.nombre}. Somos un operador logístico 3PL especializado en almacenamiento de grado alimenticio, con operación certificada bajo los estándares SQF e ISO 9001:2015, lo que garantiza procesos auditables, trazabilidad y cumplimiento normativo en cada etapa del servicio.`),
         p("Como complemento a nuestras operaciones de almacenaje, ponemos a su disposición nuestro servicio de transporte de carga, con una flotilla diversificada que se adapta a distintos volúmenes y tipos de mercancía. A continuación, presentamos nuestra propuesta de tarifa para su operación."),
         p("Tarifas de Transporte", { bold: true, color: NAVY, before: 120 }),
-        p(`Ruta: ${d.ruta}`, { bold: true }),
+        p(varios ? `Origen de los viajes: ${d.ruta}` : `Ruta: ${d.ruta}`, { bold: true }),
+        ...(varios ? [p(`Unidad: ${d.unidad_descripcion} · Capacidad ${d.tarimas} · Hora extra ${money(d.hora_extra)} · Estadía ${money(d.estadia)} por día`, { size: 17, color: "404040", after: 100 })] : []),
         tarifas,
-        p(`Tarifa expresada en pesos mexicanos (MXN), antes de IVA. Hora extra y estadía aplican una vez agotadas las ${d.cfg.horas_libres_carga} horas libres de carga y las ${d.cfg.horas_libres_descarga} horas libres de descarga.`, { size: 15, color: "595959", before: 80 }),
+        p(`${varios ? "Tarifas expresadas" : "Tarifa expresada"} en pesos mexicanos (MXN), antes de IVA. Hora extra y estadía aplican una vez agotadas las ${d.cfg.horas_libres_carga} horas libres de carga y las ${d.cfg.horas_libres_descarga} horas libres de descarga.`, { size: 15, color: "595959", before: 80 }),
         p("Condiciones Comerciales", { bold: true, color: NAVY, before: 120 }),
         ...d.condiciones.map((c) => new Paragraph({ numbering: { reference: "vinetas", level: 0 }, spacing: { after: 60, line: 264 }, children: [t(c, { size: 16 })] })),
         p("Quedamos atentos a sus comentarios y a su disposición para coordinar el inicio de operaciones.", { size: 16, before: 120 }),

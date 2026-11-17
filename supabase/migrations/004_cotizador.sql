@@ -119,3 +119,6 @@ alter table public.poblaciones
   add column if not exists sict_estado int,
   add column if not exists sict_id text,
   add column if not exists sict_nombre text;
+
+-- Cotización con varios destinos: cada línea lleva su punto de entrega, km, casetas y tarifa
+alter table public.cotizaciones add column if not exists destinos jsonb not null default '[]'::jsonb;

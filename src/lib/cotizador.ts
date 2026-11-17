@@ -69,8 +69,11 @@ export const CONFIG_DEFAULT: ConfigCotizador = {
   },
   condiciones: [
     "Tarifa aplica por viaje sencillo, ruta {ruta}.",
+    "La tarifa cubre un solo reparto por viaje. Un punto de entrega adicional se cotiza por separado.",
     "A la tarifa se le suma el IVA del 16 %.",
     "La tarifa incluye combustible, casetas y operador.",
+    "Carga y descarga a piso.",
+    "Maniobras: $700.00 por tarima.",
     "Tiempo de espera en carga: {horas_carga} horas libres, contadas desde la llegada de la unidad a la planta o bodega de origen.",
     "Tiempo de espera en descarga: {horas_descarga} horas libres, contadas desde la llegada de la unidad al punto de entrega. Se toma la hora registrada en la caseta.",
     "Pasadas las horas libres se cobra hora extra por cada hora o fracción. Las horas de espera se validan con la hora de llegada y salida registrada en la carta porte o bitácora del operador.",
