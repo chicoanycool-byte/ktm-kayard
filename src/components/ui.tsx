@@ -110,25 +110,42 @@ function valorCelda(td: Element | undefined): string {
   if (inp && inp.type !== "checkbox") return (inp.value || "").trim();
   return (td.textContent || "").replace(/\s+/g, " ").trim();
 }
+const botonPagina = (apagado: boolean): CSSProperties => ({
+  background: "none", border: `1px solid ${apagado ? "rgba(255,255,255,0.12)" : C.line}`, borderRadius: 6,
+  padding: "3px 10px", cursor: apagado ? "default" : "pointer", color: apagado ? "rgba(255,255,255,0.25)" : C.amber, fontSize: 12.5,
+});
+
 const VACIO = "(Vacías)";
 const etiquetaValor = (v: string) => (v === "" || v === "—" ? VACIO : v);
 const ordenar = (a: string, b: string) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" });
 
 type FiltroCol = { excluidos: Set<string>; texto: string };
 
-export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, onVisibles }: {
+const POR_PAGINA = 100;
+
+export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, onVisibles, porPagina = POR_PAGINA }: {
   columnas: string[]; children: ReactNode; vacio?: string; colSpan?: number;
   // avisa qué filas quedaron visibles tras los filtros de columna, por su posición original
   onVisibles?: (indices: number[]) => void;
+  porPagina?: number;
 }) {
-  const hayFilas = Array.isArray(children) ? children.length > 0 : !!children;
+  const hijos = (Array.isArray(children) ? children : [children]).filter(Boolean);
+  const hayFilas = hijos.length > 0;
   const tbody = useRef<HTMLTableSectionElement>(null);
   const [filtros, setFiltros] = useState<Record<number, FiltroCol>>({});
   const [abierto, setAbierto] = useState<{ col: number; x: number; y: number } | null>(null);
+  const [pagina, setPagina] = useState(0);
   const [conteo, setConteo] = useState<{ vis: number; total: number }>({ vis: 0, total: 0 });
   const ultimoAviso = useRef("");
   const habiaOcultas = useRef(false);
   const activos = Object.entries(filtros).filter(([, f]) => f.excluidos.size > 0 || f.texto.trim() !== "");
+  const largoPrevio = useRef(hijos.length);
+  if (largoPrevio.current !== hijos.length) { largoPrevio.current = hijos.length; if (pagina !== 0) setPagina(0); }
+
+  const paginado = porPagina > 0 && hijos.length > porPagina && activos.length === 0 && abierto === null;
+  const paginas = paginado ? Math.ceil(hijos.length / porPagina) : 1;
+  const pag = Math.min(pagina, Math.max(0, paginas - 1));
+  const enPantalla = paginado ? hijos.slice(pag * porPagina, (pag + 1) * porPagina) : hijos;
 
   const filasPrincipales = useCallback(() => {
     const rows = tbody.current ? Array.from(tbody.current.rows) : [];
@@ -193,6 +210,7 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
       {activos.length > 0 && (
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8, fontSize: 12, color: C.muted, flexWrap: "wrap" }}>
           <span>Filtrado: <b style={{ color: C.amber }}>{conteo.vis}</b> de {conteo.total} registros</span>
+          <span style={{ opacity: 0.7 }}>(el filtro busca en todos, no solo en la página)</span>
           <button onClick={() => setFiltros({})} style={{ background: "none", border: `1px solid ${C.line}`, color: C.amber, borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12 }}>Quitar filtros de la tabla</button>
         </div>
       )}
@@ -227,7 +245,7 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
             </tr>
           </thead>
           <tbody ref={tbody}>
-            {hayFilas ? children : (
+            {hayFilas ? enPantalla : (
               <tr data-vacio="1"><td colSpan={colSpan || columnas.length} style={{ textAlign: "center", padding: "2rem", color: C.muted }}>{vacio}</td></tr>
             )}
             {hayFilas && activos.length > 0 && conteo.vis === 0 && (
@@ -236,6 +254,16 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
           </tbody>
         </table>
       </div>
+      {paginado && (
+        <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end", marginTop: 10, fontSize: 13, color: C.muted, flexWrap: "wrap" }}>
+          <span>{pag * porPagina + 1}–{Math.min((pag + 1) * porPagina, hijos.length)} de {hijos.length}</span>
+          <button onClick={() => setPagina(0)} disabled={pag === 0} style={botonPagina(pag === 0)}>« Primera</button>
+          <button onClick={() => setPagina(pag - 1)} disabled={pag === 0} style={botonPagina(pag === 0)}>‹ Anterior</button>
+          <span style={{ color: C.text }}>Página {pag + 1} de {paginas}</span>
+          <button onClick={() => setPagina(pag + 1)} disabled={pag >= paginas - 1} style={botonPagina(pag >= paginas - 1)}>Siguiente ›</button>
+          <button onClick={() => setPagina(paginas - 1)} disabled={pag >= paginas - 1} style={botonPagina(pag >= paginas - 1)}>Última »</button>
+        </div>
+      )}
       {abierto && (
         <MenuFiltro
           titulo={columnas[abierto.col]}
@@ -258,7 +286,12 @@ function MenuFiltro({ titulo, x, y, valores, filtro, onAplicar, onCerrar }: {
   titulo: string; x: number; y: number; valores: () => string[]; filtro?: FiltroCol;
   onAplicar: (f: FiltroCol | null) => void; onCerrar: () => void;
 }) {
-  const [lista] = useState<string[]>(valores);
+  const [lista, setLista] = useState<string[]>([]);
+  useLayoutEffect(() => {
+    // al abrir el menú la tabla deja de paginar, así que hasta aquí el DOM ya trae todas las filas
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLista(valores());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [excluidos, setExcluidos] = useState<Set<string>>(new Set(filtro?.excluidos || []));
   const [texto, setTexto] = useState(filtro?.texto || "");
   const [buscar, setBuscar] = useState("");
