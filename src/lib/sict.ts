@@ -85,7 +85,14 @@ async function pedir(accion: string, campos: Record<string, string>) {
 }
 
 // El catálogo de puntos cambia muy poco: se guarda un rato en memoria
+import catalogo from "./sict-nodos.json";
+
 const cacheNodos = new Map<string, { nodos: ParNodos; expira: number }>();
+
+// Catálogo de puntos de la red federal guardado en la app: el servicio de la SICT a veces
+// responde con la lista recortada, así que este es el piso y lo de la web solo suma.
+const estaticos = (estado: number): NodoSICT[] =>
+  (((catalogo as unknown) as Record<string, string[][]>)[String(estado)] || []).map((par) => ({ codigo: par[0], nombre: par[1] }));
 
 export type NodoSICT = { codigo: string; nombre: string };
 export type ParNodos = { origen: NodoSICT[]; destino: NodoSICT[] };
@@ -107,17 +114,18 @@ export async function nodosDeRuta(edoOrigen: number, edoDestino: number): Promis
 
   // La SICT responde desde varios servidores y algunos traen el catálogo recortado (34 puntos de Jalisco
   // en vez de 68, por ejemplo). Se pide varias veces y se juntan los puntos de todas las respuestas.
-  const respuestas = await Promise.all([0, 1, 2].map(() =>
+  const respuestas = await Promise.all([0, 1].map(() =>
     pedirGet({ edoOrigen: String(edoOrigen), edoDestino: String(edoDestino) }).catch(() => "")
   ));
-  const unir = (campo: string, previos: NodoSICT[] = []) => {
-    const m = new Map<string, NodoSICT>(previos.map((n) => [n.codigo, n]));
+  const unir = (campo: string, estado: number, previos: NodoSICT[] = []) => {
+    const m = new Map<string, NodoSICT>(estaticos(estado).map((n) => [n.codigo, n]));
+    for (const n of previos) m.set(n.codigo, n);
     for (const html of respuestas) for (const n of opciones(html, campo)) m.set(n.codigo, n);
     return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   };
   const nodos: ParNodos = {
-    origen: unir("ciudadOrigen", guardado?.nodos.origen),
-    destino: unir("ciudadDestino", guardado?.nodos.destino),
+    origen: unir("ciudadOrigen", edoOrigen, guardado?.nodos.origen),
+    destino: unir("ciudadDestino", edoDestino, guardado?.nodos.destino),
   };
   if (nodos.origen.length) cacheNodos.set(clave, { nodos, expira: Date.now() + 12 * 3600 * 1000 });
   return nodos;
