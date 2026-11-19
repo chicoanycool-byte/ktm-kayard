@@ -149,6 +149,9 @@ export function mejorNodo(municipio: string, nodos: NodoSICT[]): NodoSICT | null
 export type Caseta = { nombre: string; costo: number };
 export type RutaSICT = { km: number; horas: string; casetas: number; detalle: Caseta[]; tramos: number; origen: string; destino: string };
 
+// Los montos de la SICT vienen como "1,234.00" o "$ 1,234.00": sin limpiarlos, Number() da NaN
+const aNumero = (s: string) => Number(String(s || "").replace(/[^\d.-]/g, ""));
+
 const sinEtiquetas = (s: string) => s.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 
 export async function consultarRuta(p: { edoOrigen: number; ciudadOrigen: string; edoDestino: number; ciudadDestino: string; vehiculo: string }): Promise<RutaSICT> {
@@ -166,16 +169,16 @@ export async function consultarRuta(p: { edoOrigen: number; ciudadOrigen: string
   let tramos = 0;
   for (const f of filas) {
     if (f.length < 7 || /^totales$/i.test(f[0])) continue;
-    if (!/^\d+(\.\d+)?$/.test(f[3])) continue;
+    if (!Number.isFinite(aNumero(f[3])) || !/\d/.test(f[3])) continue;
     tramos++;
-    const costo = Number(f[6]);
+    const costo = aNumero(f[6]);
     if (f[5] && Number.isFinite(costo) && costo > 0) detalle.push({ nombre: f[5], costo });
   }
   const enc = sinEtiquetas(html).match(/Ruta de ([^,]+) , ([^ ]+(?: [^ ]+)*?) a ([^,]+) , /);
   return {
-    km: Number(total[1]) || 0,
+    km: aNumero(total[1]) || 0,
     horas: total[2] || "",
-    casetas: Number(total[total.length - 1]) || 0,
+    casetas: aNumero(total[total.length - 1]) || 0,
     detalle, tramos,
     origen: enc?.[1]?.trim() || "", destino: enc?.[3]?.trim() || "",
   };
