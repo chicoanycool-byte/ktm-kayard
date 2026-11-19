@@ -116,12 +116,17 @@ const ordenar = (a: string, b: string) => a.localeCompare(b, "es", { numeric: tr
 
 type FiltroCol = { excluidos: Set<string>; texto: string };
 
-export function Tabla({ columnas, children, vacio = "Sin registros", colSpan }: { columnas: string[]; children: ReactNode; vacio?: string; colSpan?: number }) {
+export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, onVisibles }: {
+  columnas: string[]; children: ReactNode; vacio?: string; colSpan?: number;
+  // avisa qué filas quedaron visibles tras los filtros de columna, por su posición original
+  onVisibles?: (indices: number[]) => void;
+}) {
   const hayFilas = Array.isArray(children) ? children.length > 0 : !!children;
   const tbody = useRef<HTMLTableSectionElement>(null);
   const [filtros, setFiltros] = useState<Record<number, FiltroCol>>({});
   const [abierto, setAbierto] = useState<{ col: number; x: number; y: number } | null>(null);
   const [conteo, setConteo] = useState<{ vis: number; total: number }>({ vis: 0, total: 0 });
+  const ultimoAviso = useRef("");
   const activos = Object.entries(filtros).filter(([, f]) => f.excluidos.size > 0 || f.texto.trim() !== "");
 
   const filasPrincipales = useCallback(() => {
@@ -144,12 +149,13 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan }: 
   useLayoutEffect(() => {
     const rows = tbody.current ? Array.from(tbody.current.rows) : [];
     let vis = 0, total = 0, ultimaVisible = true;
+    const indices: number[] = [];
     for (const r of rows) {
       if (r.dataset.vacio) continue;
       if (r.cells.length >= columnas.length) {
-        total++;
         ultimaVisible = activos.length === 0 || pasa(r);
-        if (ultimaVisible) vis++;
+        if (ultimaVisible) { vis++; indices.push(total); }
+        total++;
       }
       // filas de detalle (menos celdas) siguen a su fila principal
       r.style.display = ultimaVisible ? "" : "none";
@@ -157,6 +163,10 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan }: 
     // conteo leído del DOM ya filtrado; el guard evita ciclos
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (vis !== conteo.vis || total !== conteo.total) setConteo({ vis, total });
+    if (onVisibles) {
+      const clave = activos.length === 0 ? "todas" : indices.join(",");
+      if (clave !== ultimoAviso.current) { ultimoAviso.current = clave; onVisibles(activos.length === 0 ? [] : indices); }
+    }
   });
 
   const cambiar = (col: number, f: FiltroCol | null) => setFiltros((prev) => {

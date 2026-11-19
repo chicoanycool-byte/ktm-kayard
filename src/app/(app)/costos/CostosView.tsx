@@ -6,6 +6,7 @@ import { FACTURACION_NOMBRE, FACTURACION_WHATSAPP } from "@/lib/constants";
 import { fecha, money, pct } from "@/lib/format";
 import { linkWhatsApp, msgFacturar } from "@/lib/whatsapp";
 import { enviarAFacturar } from "@/lib/facturacion";
+import { exportarExcel } from "@/lib/exportar";
 import type { ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, Card, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -151,9 +152,70 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
 
   const num = (k: string) => Number(form[k] || 0);
 
+  // ── Descarga a Excel (respeta la búsqueda, el filtro de arriba y los filtros de columna)
+  const [visibles, setVisibles] = useState<number[]>([]);
+  const [bajando, setBajando] = useState(false);
+  const paraExportar = visibles.length ? visibles.map((i) => filtrados[i]).filter(Boolean) : filtrados;
+
+  const descargarExcel = async () => {
+    setBajando(true);
+    const filas = paraExportar.map((s) => ({
+      "ID TRACK": s.id_track,
+      "Fecha de carga": s.fecha_carga ? fecha(s.fecha_carga) : "",
+      Cliente: s.cliente || "",
+      Transportista: s.proveedor || "",
+      Origen: s.origen || "",
+      Destino: s.destino || "",
+      Unidad: s.tipo_unidad || "",
+      Operador: s.operador || "",
+      Estatus: s.estatus || "",
+      "Costo flete": Number(s.costo_flete || 0),
+      "Costo maniobra": Number(s.costo_maniobra || 0),
+      "Costo estadías": Number(s.costo_estadias || 0),
+      "Costo seguro": Number(s.costo_seguro || 0),
+      "Costo total": Number(s.total_costo || 0),
+      "Venta flete": Number(s.venta_flete || 0),
+      "Venta maniobra": Number(s.venta_maniobra || 0),
+      "Venta estadías": Number(s.venta_estadias || 0),
+      "Venta seguro": Number(s.venta_seguro || 0),
+      "Venta total": Number(s.total_venta || 0),
+      Utilidad: Number(s.utilidad || 0),
+      "Margen %": Number(s.margen_pct || 0),
+      Facturación: FACT[s.estatus_facturacion || "por_facturar"]?.label || "",
+      "Factura Kayard": s.factura_kayard || "",
+      "Factura proveedor": s.factura_proveedor || "",
+      "Pago proveedor": s.estatus_pago === "pagado" ? "Pagado" : "Pendiente",
+      "Enviado a facturar": s.enviado_facturar_at ? fecha(s.enviado_facturar_at) : "",
+    }));
+    const t = paraExportar.reduce((a, s) => ({
+      costo: a.costo + Number(s.total_costo || 0), venta: a.venta + Number(s.total_venta || 0), util: a.util + Number(s.utilidad || 0),
+    }), { costo: 0, venta: 0, util: 0 });
+    const resumen = [
+      { Concepto: "Servicios", Valor: paraExportar.length },
+      { Concepto: "Venta", Valor: t.venta },
+      { Concepto: "Costo", Valor: t.costo },
+      { Concepto: "Utilidad", Valor: t.util },
+      { Concepto: "Margen %", Valor: t.venta ? Math.round((t.util / t.venta) * 1000) / 10 : 0 },
+      { Concepto: "Filtro de pantalla", Valor: filtro === "pendientes" ? "Finalizados por facturar" : filtro === "todos" ? "Todos" : FACT[filtro]?.label || filtro },
+      { Concepto: "Búsqueda", Valor: busqueda || "(sin búsqueda)" },
+      { Concepto: "Filtros de columna", Valor: visibles.length ? "Sí, aplicados" : "No" },
+      { Concepto: "Descargado", Valor: new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" }) },
+    ];
+    try {
+      await exportarExcel([{ nombre: "Costos y venta", filas }, { nombre: "Resumen", filas: resumen }], "Costos_y_venta_KTM");
+    } finally { setBajando(false); }
+  };
+
   return (
     <div>
-      <Titulo accion={<Btn small variante="secundario" onClick={configurarFacturacion}>WhatsApp facturación: {telFact ? `${nomFact || ""} ${telFact}` : "configurar"}</Btn>}>Costos y venta</Titulo>
+      <Titulo accion={
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn small variante="secundario" onClick={descargarExcel} disabled={bajando || paraExportar.length === 0}>
+            {bajando ? "Generando…" : `⬇ Excel (${paraExportar.length})`}
+          </Btn>
+          <Btn small variante="secundario" onClick={configurarFacturacion}>WhatsApp facturación: {telFact ? `${nomFact || ""} ${telFact}` : "configurar"}</Btn>
+        </div>
+      }>Costos y venta</Titulo>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
         <Card><p style={{ margin: 0, color: C.muted, fontSize: 12 }}>Venta</p><p style={{ margin: 0, color: C.amber, fontSize: 22, fontWeight: 700 }}>{money(tot.venta)}</p></Card>
         <Card><p style={{ margin: 0, color: C.muted, fontSize: 12 }}>Costo</p><p style={{ margin: 0, color: C.blue, fontSize: 22, fontWeight: 700 }}>{money(tot.costo)}</p></Card>
@@ -168,7 +230,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
           {Object.entries(FACT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
       </div>
-      <Tabla columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Pago proveedor", ""]}>
+      <Tabla onVisibles={setVisibles} columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Pago proveedor", ""]}>
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i} onClick={() => abrir(s)}>
             <Td fuerte>{s.id_track}</Td>
