@@ -72,7 +72,7 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
 
       <Card style={{ marginBottom: "1rem", overflowX: "auto" }}>
         <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>UNIDADES</p>
-        <Tabla columnas={["Unidad", "Combustible", "Capacidad kg", "Rend. vacío", "Rend. cargado", "Vel. km/h", "Hrs fijas", "Mtto $/km", "Op. local", "Op. regional $/km", "Op. foráneo $/km", "Op. mínimo", "Fijo diario", "Hora extra", "Estadía"]}>
+        <Tabla columnas={["Unidad", "Combustible", "Capacidad kg", "Rend. vacío", "Rend. cargado", "Vel. km/h", "Hrs fijas", "Mtto $/km", "Op. local", "Op. regional $/km", "Op. foráneo $/km", "Op. mínimo", "Días mín.", "Fijo diario", "Hora extra", "Estadía"]}>
           {UNIDADES.map((u, i) => (
             <Tr key={u} i={i}>
               <Td fuerte>{cfg.unidades[u].nombre}</Td>
@@ -87,6 +87,7 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
               <Td>{campoNum(cfg.unidades[u].operador_regional_km, (v) => setUnidad(u, "operador_regional_km", v), 80)}</Td>
               <Td>{campoNum(cfg.unidades[u].operador_foraneo_km, (v) => setUnidad(u, "operador_foraneo_km", v), 80)}</Td>
               <Td>{campoNum(cfg.unidades[u].operador_minimo, (v) => setUnidad(u, "operador_minimo", v))}</Td>
+              <Td>{campoNum(cfg.unidades[u].dias_minimos, (v) => setUnidad(u, "dias_minimos", v), 70)}</Td>
               <Td>{campoNum(cfg.unidades[u].costo_fijo_diario, (v) => setUnidad(u, "costo_fijo_diario", v), 100)}</Td>
               <Td>{campoNum(cfg.unidades[u].hora_extra, (v) => setUnidad(u, "hora_extra", v))}</Td>
               <Td>{campoNum(cfg.unidades[u].estadia, (v) => setUnidad(u, "estadia", v))}</Td>
@@ -96,12 +97,13 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
         <p style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>
           El costo fijo diario es la suma de depreciación, seguros, permisos, placas, GPS, IMSS, administración, financiamiento, fumigaciones y tiempo muerto, como en tu Excel.
           El rendimiento se interpola entre vacío y cargado según el peso que se capture en la cotización, y el operador nunca cobra menos de su mínimo por viaje.
+          Los días mínimos son lo que se le cobra de unidad a un viaje aunque sea corto: un tráiler en un movimiento local pierde el día completo, una camioneta alcanza a dar varias vueltas.
         </p>
       </Card>
 
       <Card style={{ marginBottom: "1rem", overflowX: "auto" }}>
-        <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>MÁRGENES (0.70 = la tarifa se divide entre 0.70)</p>
-        <Tabla columnas={["Unidad", ...TIPOS_VIAJE.flatMap((t) => [`${t} · proveedor`, `${t} · venta`])]}>
+        <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>MÁRGENES (0.85 = la tarifa se divide entre 0.85, o sea 15 % de margen)</p>
+        <Tabla columnas={["Unidad", ...TIPOS_VIAJE.flatMap((t) => [`${t} · proveedor`, `${t} · venta sugerida`])]}>
           {UNIDADES.map((u, i) => (
             <Tr key={u} i={i}>
               <Td fuerte>{cfg.unidades[u].nombre}</Td>
@@ -112,6 +114,11 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
             </Tr>
           ))}
         </Tabla>
+        <p style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>
+          El de proveedor es el margen que se le reconoce al transportista cuando la tarifa se calcula con la fórmula; si la ruta ya tiene historial en KTM,
+          el cotizador usa lo que realmente pagas y este número no interviene. El de venta solo se sugiere en pantalla: el margen propio se suma únicamente
+          si se captura en la cotización. Los valores de venta vienen de tu historial: tráiler 17 %, 1.5 ton 25 %, torton y rabón 14 %.
+        </p>
       </Card>
 
       <div style={{ display: "flex", gap: 8 }}>

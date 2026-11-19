@@ -45,5 +45,24 @@ ok("el viaje local paga el fijo del operador", local.operador === cfg.unidades.c
 ok("la tarifa al cliente siempre cubre el costo", [sencillo, vacio, cargado, conRepo, corto, local].every((d) => d.tarifa_cliente > d.costo_operativo));
 ok("compatibilidad con cotizaciones guardadas (retorno_vacio)", calcular({ ...base(), retorno: undefined as unknown as EntradaCotizacion["retorno"], retorno_vacio: true }, cfg).km_total === 800);
 
+// Margen de Bonyard: solo suma si se captura
+const sinMargen = calcular(base(), cfg);
+ok("sin margen propio la venta es igual a la tarifa del transportista", sinMargen.tarifa_cliente === sinMargen.tarifa_proveedor);
+ok("sin margen propio no hay utilidad de venta", sinMargen.utilidad_empresa === 0);
+const conMargen = calcular(base({ margen_empresa: 0.83 }), cfg);
+ok("con margen de 17% la venta sube", conMargen.tarifa_cliente > conMargen.tarifa_proveedor);
+ok("el margen capturado es 17% de la venta", Math.abs(conMargen.utilidad_empresa / conMargen.tarifa_cliente - 0.17) < 0.001, String(conMargen.utilidad_empresa / conMargen.tarifa_cliente));
+
+// Base del historial de KTM
+const conBase = calcular(base({ tarifa_proveedor_base: 7000, margen_empresa: 0.83 }), cfg);
+ok("la tarifa real de KTM manda sobre la fórmula", conBase.tarifa_proveedor === 7000);
+ok("la venta se calcula sobre la tarifa real", Math.abs(conBase.tarifa_cliente - 7000 / 0.83) < 0.01, String(conBase.tarifa_cliente));
+ok("el margen del transportista se reporta contra el costo estimado", Math.abs(conBase.margen_proveedor - (1 - conBase.costo_operativo / 7000)) < 0.01);
+
+// Días mínimos por unidad
+const tramoCorto = calcular(base({ unidad: "trailer", tipo_viaje: "Local", km: 60, casetas: 0 }), cfg);
+ok("un tráiler local cobra el día completo de unidad", tramoCorto.dias >= 1, String(tramoCorto.dias));
+ok("una camioneta local no cobra el día completo", calcular(base({ unidad: "camioneta_1_5", tipo_viaje: "Local", km: 30, casetas: 0 }), cfg).dias < 1);
+
 console.log(fallas === 0 ? "\nTodo bien." : `\n${fallas} falla(s).`);
 process.exit(fallas === 0 ? 0 : 1);

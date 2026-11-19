@@ -29,6 +29,7 @@ export type ParamUnidad = {
   operador_regional_km: number;
   operador_foraneo_km: number;
   operador_minimo: number;     // piso de pago al operador por viaje regional o foráneo
+  dias_minimos: number;        // lo menos que se le cobra de unidad a un viaje, aunque sea corto
   costo_fijo_diario: number;   // suma de depreciación, seguros, permisos, GPS, IMSS, administración, etc.
   hora_extra: number;          // $ por hora extra (carta)
   estadia: number;             // $ por día de estadía (carta)
@@ -56,7 +57,7 @@ export type ConfigCotizador = {
 
 // Márgenes por tipo de viaje. El de proveedor es el margen que deja el transportista sobre su
 // costo de operación y el de empresa el que agrega Bonyard: 0.85 significa 15 % de margen.
-const m = (prov: [number, number, number] = [0.8, 0.85, 0.87], emp: [number, number, number] = [0.85, 0.87, 0.88]) =>
+const m = (prov: [number, number, number] = [0.8, 0.85, 0.87], emp: [number, number, number] = [0.83, 0.83, 0.83]) =>
   ({ Local: { proveedor: prov[0], empresa: emp[0] }, Regional: { proveedor: prov[1], empresa: emp[1] }, Foraneo: { proveedor: prov[2], empresa: emp[2] } });
 
 export const CONFIG_DEFAULT: ConfigCotizador = {
@@ -73,18 +74,18 @@ export const CONFIG_DEFAULT: ConfigCotizador = {
   horas_libres_descarga: 3,
   dias_credito: 15,
   margenes: {
-    camioneta_1_5: m(),
-    camioneta_3_5: m(),
-    torton: m(),
-    trailer: m(),
-    full: m(),
+    camioneta_1_5: m([0.8, 0.85, 0.87], [0.75, 0.75, 0.75]),
+    camioneta_3_5: m([0.8, 0.85, 0.87], [0.78, 0.78, 0.78]),
+    torton: m([0.8, 0.85, 0.87], [0.86, 0.86, 0.86]),
+    trailer: m([0.8, 0.85, 0.87], [0.83, 0.83, 0.83]),
+    full: m([0.8, 0.85, 0.87], [0.85, 0.85, 0.85]),
   },
   unidades: {
-    camioneta_1_5: { nombre: "Camioneta 1.5 ton", descripcion_carta: "Camioneta 1.5 ton caja seca", tarimas: "4 a piso", combustible: "gasolina", capacidad_kg: 1500, rendimiento_vacio: 10, rendimiento_cargado: 7, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.1, operador_local: 300, operador_regional_km: 1.5, operador_foraneo_km: 1.2, operador_minimo: 400, costo_fijo_diario: 600, hora_extra: 250, estadia: 1800, sict_vehiculo: "5", equivalencias_ktm: ["1.5 tons", "1,5 tons"] },
-    camioneta_3_5: { nombre: "Camioneta 3.5 ton", descripcion_carta: "Camioneta 3.5 ton caja seca", tarimas: "6 a piso", combustible: "gasolina", capacidad_kg: 3500, rendimiento_vacio: 7.5, rendimiento_cargado: 5, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.55, operador_local: 400, operador_regional_km: 2.2, operador_foraneo_km: 1.8, operador_minimo: 500, costo_fijo_diario: 850, hora_extra: 300, estadia: 2200, sict_vehiculo: "9", equivalencias_ktm: ["3.5 tons", "3,5 tons"] },
-    torton: { nombre: "Torton", descripcion_carta: "Torton caja seca", tarimas: "14 a piso", combustible: "diesel", capacidad_kg: 15000, rendimiento_vacio: 4.5, rendimiento_cargado: 3, velocidad: 50, horas_fijas: 8, mantenimiento_km: 3, operador_local: 500, operador_regional_km: 3.5, operador_foraneo_km: 2.8, operador_minimo: 700, costo_fijo_diario: 1550, hora_extra: 400, estadia: 3500, sict_vehiculo: "10", equivalencias_ktm: ["Torton", "Rabon", "Rabón"] },
-    trailer: { nombre: "Trailer", descripcion_carta: "Trailer caja seca 53 pies", tarimas: "24 a piso", combustible: "diesel", capacidad_kg: 30000, rendimiento_vacio: 3.6, rendimiento_cargado: 2.5, velocidad: 50, horas_fijas: 16, mantenimiento_km: 4.25, operador_local: 600, operador_regional_km: 4.5, operador_foraneo_km: 3.8, operador_minimo: 900, costo_fijo_diario: 2300, hora_extra: 500, estadia: 4500, sict_vehiculo: "12", equivalencias_ktm: ["Trailer"] },
-    full: { nombre: "Full", descripcion_carta: "Full (2 cajas secas 40 pies)", tarimas: "48 a piso", combustible: "diesel", capacidad_kg: 45000, rendimiento_vacio: 3, rendimiento_cargado: 1.9, velocidad: 40, horas_fijas: 18, mantenimiento_km: 6.5, operador_local: 800, operador_regional_km: 6, operador_foraneo_km: 5.5, operador_minimo: 1100, costo_fijo_diario: 2800, hora_extra: 600, estadia: 5500, sict_vehiculo: "16", equivalencias_ktm: ["Full"] },
+    camioneta_1_5: { nombre: "Camioneta 1.5 ton", descripcion_carta: "Camioneta 1.5 ton caja seca", tarimas: "4 a piso", combustible: "gasolina", capacidad_kg: 1500, rendimiento_vacio: 10, rendimiento_cargado: 7, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.1, operador_local: 300, operador_regional_km: 1.5, operador_foraneo_km: 1.2, operador_minimo: 400, dias_minimos: 0.35, costo_fijo_diario: 600, hora_extra: 250, estadia: 1800, sict_vehiculo: "5", equivalencias_ktm: ["1.5 tons", "1,5 tons"] },
+    camioneta_3_5: { nombre: "Camioneta 3.5 ton", descripcion_carta: "Camioneta 3.5 ton caja seca", tarimas: "6 a piso", combustible: "gasolina", capacidad_kg: 3500, rendimiento_vacio: 7.5, rendimiento_cargado: 5, velocidad: 60, horas_fijas: 6, mantenimiento_km: 1.55, operador_local: 400, operador_regional_km: 2.2, operador_foraneo_km: 1.8, operador_minimo: 500, dias_minimos: 0.5, costo_fijo_diario: 850, hora_extra: 300, estadia: 2200, sict_vehiculo: "9", equivalencias_ktm: ["3.5 tons", "3,5 tons"] },
+    torton: { nombre: "Torton", descripcion_carta: "Torton caja seca", tarimas: "14 a piso", combustible: "diesel", capacidad_kg: 15000, rendimiento_vacio: 4.5, rendimiento_cargado: 3, velocidad: 50, horas_fijas: 8, mantenimiento_km: 3, operador_local: 500, operador_regional_km: 3.5, operador_foraneo_km: 2.8, operador_minimo: 700, dias_minimos: 0.75, costo_fijo_diario: 1550, hora_extra: 400, estadia: 3500, sict_vehiculo: "10", equivalencias_ktm: ["Torton", "Rabon", "Rabón"] },
+    trailer: { nombre: "Trailer", descripcion_carta: "Trailer caja seca 53 pies", tarimas: "24 a piso", combustible: "diesel", capacidad_kg: 30000, rendimiento_vacio: 3.6, rendimiento_cargado: 2.5, velocidad: 50, horas_fijas: 16, mantenimiento_km: 4.25, operador_local: 600, operador_regional_km: 4.5, operador_foraneo_km: 3.8, operador_minimo: 900, dias_minimos: 1, costo_fijo_diario: 2300, hora_extra: 500, estadia: 4500, sict_vehiculo: "12", equivalencias_ktm: ["Trailer"] },
+    full: { nombre: "Full", descripcion_carta: "Full (2 cajas secas 40 pies)", tarimas: "48 a piso", combustible: "diesel", capacidad_kg: 45000, rendimiento_vacio: 3, rendimiento_cargado: 1.9, velocidad: 40, horas_fijas: 18, mantenimiento_km: 6.5, operador_local: 800, operador_regional_km: 6, operador_foraneo_km: 5.5, operador_minimo: 1100, dias_minimos: 1, costo_fijo_diario: 2800, hora_extra: 600, estadia: 5500, sict_vehiculo: "16", equivalencias_ktm: ["Full"] },
   },
   condiciones: [
     "Tarifa aplica por viaje sencillo, ruta {ruta}.",
@@ -132,7 +133,8 @@ export type EntradaCotizacion = {
   personas: number;             // para viáticos
   precio_combustible: number;   // $/L usado en esta cotización
   margen_proveedor?: number;    // permite ajustar por cotización
-  margen_empresa?: number;
+  tarifa_proveedor_base?: number; // tarifa real de compra de KTM; si viene, manda sobre la fórmula
+  margen_empresa?: number;      // margen de Bonyard; si no se captura, la venta es igual a la tarifa proveedor
   retorno_vacio?: boolean;      // (anterior) cotizaciones guardadas antes del cambio
 };
 
@@ -162,7 +164,7 @@ export function calcular(e: EntradaCotizacion, cfg: ConfigCotizador): Desglose {
   const litros = km_cargados / (rend_cargado || 1) + km_vacios / (rend_vacio || 1);
   const combustible = litros * (Number(e.precio_combustible) || 0);
 
-  const dias = Math.max(cfg.dias_minimos || 0, Math.round(((km_total / u.velocidad + u.horas_fijas) / 24) * 100) / 100);
+  const dias = Math.max(u.dias_minimos || cfg.dias_minimos || 0, Math.round(((km_total / u.velocidad + u.horas_fijas) / 24) * 100) / 100);
   const operador = e.tipo_viaje === "Local"
     ? u.operador_local
     : Math.max(u.operador_minimo || 0, (e.tipo_viaje === "Regional" ? u.operador_regional_km : u.operador_foraneo_km) * km_total);
@@ -177,14 +179,18 @@ export function calcular(e: EntradaCotizacion, cfg: ConfigCotizador): Desglose {
 
   const costo_operativo = combustible + operador + mantenimiento + viaticos + fijos + casetas;
   const mp = e.margen_proveedor ?? cfg.margenes[e.unidad][e.tipo_viaje].proveedor;
-  const me = e.margen_empresa ?? cfg.margenes[e.unidad][e.tipo_viaje].empresa;
-  const tarifa_proveedor = costo_operativo / (mp || 1);
-  const tarifa_cliente = tarifa_proveedor / (me || 1);
+  const me = e.margen_empresa;
+  const base = Number(e.tarifa_proveedor_base) || 0;
+  const tarifa_proveedor = base > 0 ? base : costo_operativo / (mp || 1);
+  // Margen de Bonyard: solo se suma si se capturó
+  const tarifa_cliente = me && me > 0 && me < 1 ? tarifa_proveedor / me : tarifa_proveedor;
   const iva = tarifa_cliente * cfg.iva;
   return {
     km_cargados: r2(km_cargados), km_vacios: r2(km_vacios), km_total: r2(km_total), rendimiento: r2(rend_cargado),
     dias, litros: r2(litros), combustible: r2(combustible), operador: r2(operador), mantenimiento: r2(mantenimiento), viaticos: r2(viaticos), fijos: r2(fijos), casetas: r2(casetas),
-    costo_operativo: r2(costo_operativo), margen_proveedor: mp, tarifa_proveedor: r2(tarifa_proveedor), margen_empresa: me, tarifa_cliente: r2(tarifa_cliente),
+    costo_operativo: r2(costo_operativo),
+    margen_proveedor: base > 0 ? r2(1 - costo_operativo / base) : mp,
+    tarifa_proveedor: r2(tarifa_proveedor), margen_empresa: me ?? 1, tarifa_cliente: r2(tarifa_cliente),
     iva: r2(iva), total: r2(tarifa_cliente + iva), utilidad_proveedor: r2(tarifa_proveedor - costo_operativo), utilidad_empresa: r2(tarifa_cliente - tarifa_proveedor),
   };
 }
@@ -198,6 +204,12 @@ export function rendimientoPorPeso(u: ParamUnidad, peso_kg?: number | null): num
   if (!cap) return cargado;
   const peso = peso_kg == null || !(Number(peso_kg) > 0) ? cap : Math.min(Number(peso_kg), cap);
   return vacio - (vacio - cargado) * (peso / cap);
+}
+
+// Margen de venta que sugiere el historial de KTM para esa unidad (en % sobre la venta)
+export function margenSugerido(cfg: ConfigCotizador, unidad: Unidad, tipo: TipoViaje): number {
+  const e = cfg.margenes[unidad]?.[tipo]?.empresa;
+  return e && e > 0 && e < 1 ? Math.round((1 - e) * 1000) / 10 : 0;
 }
 
 // Sugerencia de tipo de viaje por distancia (el usuario puede cambiarla)
