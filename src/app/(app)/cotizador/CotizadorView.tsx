@@ -8,7 +8,6 @@ import {
   UNIDADES, TIPOS_VIAJE, calcular, condicionesTexto, referenciaKTM, tipoViajeSugerido,
   type ComparativoKTM, type ConfigCotizador, type Desglose, type TipoViaje, type Unidad,
 } from "@/lib/cotizador";
-import { descargarBlob, generarCartaCotizacion } from "@/lib/cartaCotizacion";
 
 type NodoSICT = { codigo: string; nombre: string };
 type RutaOficial = { km: number; horas: string; casetas: number; detalle: { nombre: string; costo: number }[]; punto: { origen: string; destino: string }; aproximado: boolean; fuente: string; nodoOrigen: string; nodoDestino: string };
@@ -203,6 +202,8 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   };
 
   const carta = useCallback(async (c: Cotizacion) => {
+    // la librería de Word pesa ~250 KB: se baja solo cuando pides la carta
+    const { descargarBlob, generarCartaCotizacion } = await import("@/lib/cartaCotizacion");
     const blob = await generarCartaCotizacion({
       folio: c.folio, fecha: c.fecha, cliente: c.cliente_nombre, contacto: c.contacto, ruta: (c.destinos || []).length > 1 ? c.origen : `${c.origen} → ${c.destino}`,
       unidad_descripcion: c.unidad_descripcion || cfg.unidades[c.unidad]?.descripcion_carta || c.unidad,

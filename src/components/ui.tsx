@@ -108,7 +108,7 @@ function valorCelda(td: Element | undefined): string {
   if (sel) return (sel.options[sel.selectedIndex]?.text || "").trim();
   const inp = td.querySelector("input") as HTMLInputElement | null;
   if (inp && inp.type !== "checkbox") return (inp.value || "").trim();
-  return ((td as HTMLElement).innerText || td.textContent || "").replace(/\s+/g, " ").trim();
+  return (td.textContent || "").replace(/\s+/g, " ").trim();
 }
 const VACIO = "(Vacías)";
 const etiquetaValor = (v: string) => (v === "" || v === "—" ? VACIO : v);
@@ -127,6 +127,7 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
   const [abierto, setAbierto] = useState<{ col: number; x: number; y: number } | null>(null);
   const [conteo, setConteo] = useState<{ vis: number; total: number }>({ vis: 0, total: 0 });
   const ultimoAviso = useRef("");
+  const habiaOcultas = useRef(false);
   const activos = Object.entries(filtros).filter(([, f]) => f.excluidos.size > 0 || f.texto.trim() !== "");
 
   const filasPrincipales = useCallback(() => {
@@ -147,25 +148,37 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
 
   // Aplica los filtros después de cada render (las filas las pinta cada pantalla)
   useLayoutEffect(() => {
+    // Sin filtros no hay nada que recorrer: con tablas de cientos de filas esto se nota
+    if (activos.length === 0) {
+      if (habiaOcultas.current) {
+        for (const r of tbody.current ? Array.from(tbody.current.rows) : []) r.style.display = "";
+        habiaOcultas.current = false;
+      }
+      if (onVisibles && ultimoAviso.current !== "todas") { ultimoAviso.current = "todas"; onVisibles([]); }
+      return;
+    }
     const rows = tbody.current ? Array.from(tbody.current.rows) : [];
-    let vis = 0, total = 0, ultimaVisible = true;
+    let vis = 0, total = 0, ultimaVisible = true, ocultas = false;
     const indices: number[] = [];
     for (const r of rows) {
       if (r.dataset.vacio) continue;
       if (r.cells.length >= columnas.length) {
-        ultimaVisible = activos.length === 0 || pasa(r);
+        ultimaVisible = pasa(r);
         if (ultimaVisible) { vis++; indices.push(total); }
         total++;
       }
       // filas de detalle (menos celdas) siguen a su fila principal
-      r.style.display = ultimaVisible ? "" : "none";
+      const display = ultimaVisible ? "" : "none";
+      if (r.style.display !== display) r.style.display = display;
+      if (!ultimaVisible) ocultas = true;
     }
+    habiaOcultas.current = ocultas;
     // conteo leído del DOM ya filtrado; el guard evita ciclos
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (vis !== conteo.vis || total !== conteo.total) setConteo({ vis, total });
     if (onVisibles) {
-      const clave = activos.length === 0 ? "todas" : indices.join(",");
-      if (clave !== ultimoAviso.current) { ultimoAviso.current = clave; onVisibles(activos.length === 0 ? [] : indices); }
+      const clave = indices.join(",");
+      if (clave !== ultimoAviso.current) { ultimoAviso.current = clave; onVisibles(indices); }
     }
   });
 
