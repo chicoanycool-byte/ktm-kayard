@@ -104,9 +104,21 @@ export async function nodosDeRuta(edoOrigen: number, edoDestino: number): Promis
   const clave = `${edoOrigen}-${edoDestino}`;
   const guardado = cacheNodos.get(clave);
   if (guardado && guardado.expira > Date.now()) return guardado.nodos;
-  // El catálogo llega completo pidiendo la página con los estados en la liga (así responde con todos los puntos)
-  const html = await pedirGet({ edoOrigen: String(edoOrigen), edoDestino: String(edoDestino) });
-  const nodos: ParNodos = { origen: opciones(html, "ciudadOrigen"), destino: opciones(html, "ciudadDestino") };
+
+  // La SICT responde desde varios servidores y algunos traen el catálogo recortado (34 puntos de Jalisco
+  // en vez de 68, por ejemplo). Se pide varias veces y se juntan los puntos de todas las respuestas.
+  const respuestas = await Promise.all([0, 1, 2].map(() =>
+    pedirGet({ edoOrigen: String(edoOrigen), edoDestino: String(edoDestino) }).catch(() => "")
+  ));
+  const unir = (campo: string, previos: NodoSICT[] = []) => {
+    const m = new Map<string, NodoSICT>(previos.map((n) => [n.codigo, n]));
+    for (const html of respuestas) for (const n of opciones(html, campo)) m.set(n.codigo, n);
+    return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  };
+  const nodos: ParNodos = {
+    origen: unir("ciudadOrigen", guardado?.nodos.origen),
+    destino: unir("ciudadDestino", guardado?.nodos.destino),
+  };
   if (nodos.origen.length) cacheNodos.set(clave, { nodos, expira: Date.now() + 12 * 3600 * 1000 });
   return nodos;
 }
