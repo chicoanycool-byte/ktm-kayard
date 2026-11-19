@@ -5,12 +5,12 @@ import { fecha, money } from "@/lib/format";
 import { Btn, C, Campo, Card, Dato, Grid, Modal, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 import SelectBuscable from "@/components/SelectBuscable";
 import {
-  UNIDADES, TIPOS_VIAJE, calcular, condicionesTexto, referenciaKTM, tipoViajeSugerido,
-  type ComparativoKTM, type ConfigCotizador, type Desglose, type TipoViaje, type Unidad,
+  UNIDADES, TIPOS_VIAJE, RETORNOS, RETORNO_TEXTO, calcular, condicionesTexto, referenciaKTM, tipoViajeSugerido,
+  type ComparativoKTM, type ConfigCotizador, type Desglose, type Retorno, type TipoViaje, type Unidad,
 } from "@/lib/cotizador";
 
 type NodoSICT = { codigo: string; nombre: string };
-type RutaOficial = { km: number; horas: string; casetas: number; detalle: { nombre: string; costo: number }[]; punto: { origen: string; destino: string }; aproximado: boolean; fuente: string; nodoOrigen: string; nodoDestino: string };
+type RutaOficial = { km: number; horas: string; casetas: number; detalle: { nombre: string; costo: number }[]; punto: { origen: string; destino: string }; aproximado: boolean; fuente: string; nodoOrigen: string; nodoDestino: string; reposicion: { km: number; casetas: number; destino: string } | null };
 
 export type Cotizacion = {
   id: string; folio: string; fecha: string; vigencia_dias: number; cliente_id: string | null; cliente_nombre: string; contacto: string | null;
@@ -49,7 +49,11 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const [tipoViaje, setTipoViaje] = useState<TipoViaje>("Foraneo");
   const [km, setKm] = useState("");
   const [casetas, setCasetas] = useState("");
-  const [retorno, setRetorno] = useState(true);
+  const [retorno, setRetorno] = useState<Retorno>("sencillo");
+  const [peso, setPeso] = useState("");
+  const [kmRepo, setKmRepo] = useState("");
+  const [casetasRepo, setCasetasRepo] = useState("");
+  const [repoDestino, setRepoDestino] = useState("");
   const [personas, setPersonas] = useState("1");
   const [notas, setNotas] = useState("");
   const [tarimas, setTarimas] = useState(config.unidades.trailer.tarimas);
@@ -90,9 +94,10 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const nombreCliente = clientes.find((c) => c.id === clienteId)?.nombre || clienteTexto;
 
   const d = useMemo(() => calcular({
-    unidad, tipo_viaje: tipoViaje, km: num(km), retorno_vacio: retorno, casetas: num(casetas), personas: num(personas) || 1,
+    unidad, tipo_viaje: tipoViaje, km: num(km), retorno, casetas: num(casetas), personas: num(personas) || 1,
+    km_reposicion: num(kmRepo), casetas_reposicion: num(casetasRepo), peso_kg: num(peso) || undefined,
     precio_combustible: precio, margen_proveedor: ajusteProv ? num(ajusteProv) / 100 : undefined, margen_empresa: ajusteEmp ? num(ajusteEmp) / 100 : undefined,
-  }, cfg), [unidad, tipoViaje, km, retorno, casetas, personas, precio, ajusteProv, ajusteEmp, cfg]);
+  }, cfg), [unidad, tipoViaje, km, retorno, casetas, personas, kmRepo, casetasRepo, peso, precio, ajusteProv, ajusteEmp, cfg]);
 
   // ── Comparativo con lo real de KTM
   const [comp, setComp] = useState<ComparativoKTM | null>(null);
@@ -137,6 +142,9 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
         setKm(String(j.km));
         setCasetas(String(Math.round(j.casetas)));
         setTipoViaje(tipoViajeSugerido(j.km));
+        setKmRepo(j.reposicion ? String(j.reposicion.km) : "");
+        setCasetasRepo(j.reposicion ? String(Math.round(j.reposicion.casetas)) : "");
+        setRepoDestino(j.reposicion ? j.reposicion.destino : "");
         if (j.aproximado) setAvisoKm(`Se usaron los puntos de la red federal más cercanos: ${j.punto.origen} → ${j.punto.destino}. Ajusta los km si hace falta.`);
       } else {
         setAvisoKm(j.error);
@@ -149,7 +157,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   // al cambiar la ruta o la unidad, lo consultado deja de aplicar
   const rutaClave = `${origenId}|${destinoId}|${unidad}`;
   const [claveRuta, setClaveRuta] = useState(rutaClave);
-  if (claveRuta !== rutaClave) { setClaveRuta(rutaClave); if (oficial) { setOficial(null); setNodoO(""); setNodoD(""); setAvisoKm(""); } }
+  if (claveRuta !== rutaClave) { setClaveRuta(rutaClave); if (oficial) { setOficial(null); setNodoO(""); setNodoD(""); setAvisoKm(""); setKmRepo(""); setCasetasRepo(""); setRepoDestino(""); } }
 
   // ── Varios destinos en una misma cotización
   const [lineas, setLineas] = useState<LineaCotizacion[]>([]);
@@ -188,7 +196,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
       destino: multi ? (lineas.length === 1 ? p1.destino : `${lineas.length} destinos`) : destino,
       tipo_viaje: multi ? (p1.tipo_viaje || "Local") : tipoViaje, unidad, unidad_descripcion: descUnidad, tarimas,
       destinos: multi ? lineas : [],
-      km: multi ? p1.km : num(km), retorno_vacio: retorno, casetas: multi ? p1.casetas : num(casetas), personas: num(personas) || 1,
+      km: multi ? p1.km : num(km), retorno_vacio: retorno !== "sencillo", casetas: multi ? p1.casetas : num(casetas), personas: num(personas) || 1,
       precio_combustible: precio, combustible_fuente: precioManual !== "" ? "Capturado a mano" : combustible?.fuente || cfg.combustible.fuente,
       desglose: d, costo_operativo: multi ? p1.costo_operativo : d.costo_operativo, margen_proveedor: d.margen_proveedor,
       tarifa_proveedor: multi ? p1.tarifa_proveedor : d.tarifa_proveedor,
@@ -300,12 +308,24 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <Campo label="Personas (viáticos)">
               <input value={personas} onChange={(e) => setPersonas(e.target.value)} inputMode="numeric" style={inputStyle} />
             </Campo>
-            <Campo label="Retorno en vacío">
-              <select value={retorno ? "si" : "no"} onChange={(e) => setRetorno(e.target.value === "si")} style={inputStyle}>
-                <option value="si">Sí (+{Math.round((cfg.factor_retorno_vacio - 1) * 100)}%)</option>
-                <option value="no">No</option>
+            <Campo label="Peso de la mercancía (kg)">
+              <input value={peso} onChange={(e) => setPeso(e.target.value)} inputMode="decimal" placeholder={`máx ${u.capacidad_kg.toLocaleString("es-MX")}`} style={inputStyle} />
+              <span style={{ fontSize: 11, color: C.muted }}>Rendimiento {d.rendimiento} km/L{num(peso) > u.capacidad_kg ? " · excede la capacidad de la unidad" : ""}</span>
+            </Campo>
+            <Campo label="Retorno de la unidad" span={2}>
+              <select value={retorno} onChange={(e) => setRetorno(e.target.value as Retorno)} style={inputStyle}>
+                {RETORNOS.map((r) => <option key={r} value={r}>{RETORNO_TEXTO[r]}</option>)}
               </select>
             </Campo>
+            {retorno === "sencillo" && (
+              <Campo label={`Vacío a la capital${repoDestino ? ` (${repoDestino})` : ""}`} span={2}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input value={kmRepo} onChange={(e) => setKmRepo(e.target.value)} inputMode="decimal" placeholder="km" style={inputStyle} />
+                  <input value={casetasRepo} onChange={(e) => setCasetasRepo(e.target.value)} inputMode="decimal" placeholder="casetas $" style={inputStyle} />
+                </div>
+                <span style={{ fontSize: 11, color: C.muted }}>Lo que recorre vacía al descargar para buscar carga de regreso. Lo trae la SICT; déjalo en 0 si ahí mismo consigues carga.</span>
+              </Campo>
+            )}
             <Campo label="Cap. tarimas (en la carta)">
               <input value={tarimas} onChange={(e) => setTarimas(e.target.value)} style={inputStyle} />
             </Campo>
@@ -372,12 +392,13 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <Card>
             <p style={{ margin: "0 0 0.5rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>COSTO OPERATIVO</p>
+            {fila(`Kilómetros del ciclo`, `${d.km_cargados} cargados${d.km_vacios > 0 ? ` + ${d.km_vacios} vacíos` : ""} = ${d.km_total}`)}
             {fila(`Combustible (${d.litros.toFixed(0)} L a $${precio.toFixed(2)})`, money(d.combustible))}
             {fila("Pago operador", money(d.operador))}
             {fila("Mantenimiento", money(d.mantenimiento))}
             {fila(`Viáticos (${d.dias} días)`, money(d.viaticos))}
             {fila("Gastos fijos de la unidad", money(d.fijos))}
-            {fila(`Casetas${retorno ? " (con vacío)" : ""}`, money(d.casetas))}
+            {fila(`Casetas (${retorno === "sencillo" ? "un sentido" : "ida y vuelta"}${num(casetasRepo) > 0 ? " + vacío" : ""}, +${Math.round((cfg.factor_casetas - 1) * 100)}% sobre CAPUFE)`, money(d.casetas))}
             {fila("Costo total operativo", money(d.costo_operativo), { fuerte: true })}
             <div style={{ height: 10 }} />
             <p style={{ margin: "0 0 0.5rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>PROPUESTA</p>

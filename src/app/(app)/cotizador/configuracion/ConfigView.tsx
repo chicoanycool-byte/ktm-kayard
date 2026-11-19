@@ -41,7 +41,8 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
         <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>GENERALES</p>
         <Grid cols={3}>
           <Campo label="Viáticos por persona / día"><input value={String(cfg.viaticos_por_persona)} onChange={(e) => setCfg({ ...cfg, viaticos_por_persona: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Factor retorno en vacío"><input value={String(cfg.factor_retorno_vacio)} onChange={(e) => setCfg({ ...cfg, factor_retorno_vacio: n(e.target.value) })} style={inputStyle} /></Campo>
+          <Campo label="Factor sobre casetas de CAPUFE"><input value={String(cfg.factor_casetas)} onChange={(e) => setCfg({ ...cfg, factor_casetas: n(e.target.value) })} style={inputStyle} /></Campo>
+          <Campo label="Días mínimos por viaje"><input value={String(cfg.dias_minimos)} onChange={(e) => setCfg({ ...cfg, dias_minimos: n(e.target.value) })} style={inputStyle} /></Campo>
           <Campo label="IVA (0.16)"><input value={String(cfg.iva)} onChange={(e) => setCfg({ ...cfg, iva: n(e.target.value) })} style={inputStyle} /></Campo>
           <Campo label="Vigencia (días)"><input value={String(cfg.vigencia_dias)} onChange={(e) => setCfg({ ...cfg, vigencia_dias: n(e.target.value) })} style={inputStyle} /></Campo>
           <Campo label="Horas libres carga"><input value={String(cfg.horas_libres_carga)} onChange={(e) => setCfg({ ...cfg, horas_libres_carga: n(e.target.value) })} style={inputStyle} /></Campo>
@@ -71,18 +72,21 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
 
       <Card style={{ marginBottom: "1rem", overflowX: "auto" }}>
         <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>UNIDADES</p>
-        <Tabla columnas={["Unidad", "Combustible", "Rend. km/L", "Vel. km/h", "Hrs fijas", "Mtto $/km", "Op. local", "Op. regional $/km", "Op. foráneo $/km", "Fijo diario", "Hora extra", "Estadía"]}>
+        <Tabla columnas={["Unidad", "Combustible", "Capacidad kg", "Rend. vacío", "Rend. cargado", "Vel. km/h", "Hrs fijas", "Mtto $/km", "Op. local", "Op. regional $/km", "Op. foráneo $/km", "Op. mínimo", "Fijo diario", "Hora extra", "Estadía"]}>
           {UNIDADES.map((u, i) => (
             <Tr key={u} i={i}>
               <Td fuerte>{cfg.unidades[u].nombre}</Td>
               <Td><select value={cfg.unidades[u].combustible} onChange={(e) => setUnidad(u, "combustible", e.target.value)} style={{ ...inputStyle, width: 100, padding: "0.3rem" }}><option value="diesel">diésel</option><option value="gasolina">gasolina</option></select></Td>
-              <Td>{campoNum(cfg.unidades[u].rendimiento, (v) => setUnidad(u, "rendimiento", v), 70)}</Td>
+              <Td>{campoNum(cfg.unidades[u].capacidad_kg, (v) => setUnidad(u, "capacidad_kg", v), 90)}</Td>
+              <Td>{campoNum(cfg.unidades[u].rendimiento_vacio, (v) => setUnidad(u, "rendimiento_vacio", v), 70)}</Td>
+              <Td>{campoNum(cfg.unidades[u].rendimiento_cargado, (v) => setUnidad(u, "rendimiento_cargado", v), 70)}</Td>
               <Td>{campoNum(cfg.unidades[u].velocidad, (v) => setUnidad(u, "velocidad", v), 70)}</Td>
               <Td>{campoNum(cfg.unidades[u].horas_fijas, (v) => setUnidad(u, "horas_fijas", v), 70)}</Td>
               <Td>{campoNum(cfg.unidades[u].mantenimiento_km, (v) => setUnidad(u, "mantenimiento_km", v), 80)}</Td>
               <Td>{campoNum(cfg.unidades[u].operador_local, (v) => setUnidad(u, "operador_local", v))}</Td>
               <Td>{campoNum(cfg.unidades[u].operador_regional_km, (v) => setUnidad(u, "operador_regional_km", v), 80)}</Td>
               <Td>{campoNum(cfg.unidades[u].operador_foraneo_km, (v) => setUnidad(u, "operador_foraneo_km", v), 80)}</Td>
+              <Td>{campoNum(cfg.unidades[u].operador_minimo, (v) => setUnidad(u, "operador_minimo", v))}</Td>
               <Td>{campoNum(cfg.unidades[u].costo_fijo_diario, (v) => setUnidad(u, "costo_fijo_diario", v), 100)}</Td>
               <Td>{campoNum(cfg.unidades[u].hora_extra, (v) => setUnidad(u, "hora_extra", v))}</Td>
               <Td>{campoNum(cfg.unidades[u].estadia, (v) => setUnidad(u, "estadia", v))}</Td>
@@ -91,6 +95,7 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
         </Tabla>
         <p style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>
           El costo fijo diario es la suma de depreciación, seguros, permisos, placas, GPS, IMSS, administración, financiamiento, fumigaciones y tiempo muerto, como en tu Excel.
+          El rendimiento se interpola entre vacío y cargado según el peso que se capture en la cotización, y el operador nunca cobra menos de su mínimo por viaje.
         </p>
       </Card>
 

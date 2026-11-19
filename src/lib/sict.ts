@@ -17,6 +17,22 @@ export const ESTADOS_SICT: { id: number; nombre: string; alias?: string[] }[] = 
   { id: 30, nombre: "Veracruz", alias: ["Veracruz de Ignacio de la Llave"] }, { id: 31, nombre: "Yucatán" }, { id: 32, nombre: "Zacatecas" },
 ];
 
+// Capital de cada estado, en puntos de la red federal. Cuando se descarga fuera de la capital,
+// la unidad tiene que moverse vacía hasta allá para buscar carga de regreso.
+export const CAPITALES_SICT: Record<number, { codigo: string; nombre: string }> = {
+  1: { codigo: "1010", nombre: "Aguascalientes" }, 2: { codigo: "2170", nombre: "Mexicali" }, 3: { codigo: "3060", nombre: "La Paz" },
+  4: { codigo: "4040", nombre: "Campeche" }, 5: { codigo: "5330", nombre: "Saltillo" }, 6: { codigo: "6040", nombre: "Colima" },
+  7: { codigo: "7570", nombre: "Tuxtla Gutiérrez" }, 8: { codigo: "8090", nombre: "Chihuahua" }, 9: { codigo: "9010", nombre: "Cd. De México (Zócalo)" },
+  10: { codigo: "10070", nombre: "Durango" }, 11: { codigo: "11140", nombre: "Guanajuato" }, 12: { codigo: "12140", nombre: "Chilpancingo" },
+  13: { codigo: "13160", nombre: "Pachuca" }, 14: { codigo: "14160", nombre: "Guadalajara" }, 15: { codigo: "15460", nombre: "Toluca" },
+  16: { codigo: "16280", nombre: "Morelia" }, 17: { codigo: "17050", nombre: "Cuernavaca" }, 18: { codigo: "18290", nombre: "Tepic" },
+  19: { codigo: "19330", nombre: "Monterrey" }, 20: { codigo: "20140", nombre: "Oaxaca" }, 21: { codigo: "21180", nombre: "Puebla" },
+  22: { codigo: "22110", nombre: "Querétaro" }, 23: { codigo: "23050", nombre: "Chetumal" }, 24: { codigo: "24170", nombre: "San Luis Potosí" },
+  25: { codigo: "25100", nombre: "Culiacán" }, 26: { codigo: "26160", nombre: "Hermosillo" }, 27: { codigo: "27370", nombre: "Villahermosa" },
+  28: { codigo: "28120", nombre: "Cd. Victoria" }, 29: { codigo: "29080", nombre: "Tlaxcala" }, 30: { codigo: "30740", nombre: "Xalapa" },
+  31: { codigo: "31160", nombre: "Mérida" }, 32: { codigo: "32350", nombre: "Zacatecas" },
+};
+
 // Tipos de vehículo de la SICT (deciden la tarifa de caseta)
 export const VEHICULOS_SICT: { id: string; nombre: string }[] = [
   { id: "1", nombre: "Motocicleta" }, { id: "2", nombre: "Automóvil" }, { id: "5", nombre: "Pick Up" },

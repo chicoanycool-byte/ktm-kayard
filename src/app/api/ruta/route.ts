@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { consultarRuta, mejorNodo, nodosDeEstado, nodosDeRuta, partirPoblacion } from "@/lib/sict";
+import { CAPITALES_SICT, consultarRuta, mejorNodo, nodosDeEstado, nodosDeRuta, partirPoblacion } from "@/lib/sict";
 import { createClient } from "@/lib/supabase/server";
 
 // El punto de la red federal que se eligió para cada población se guarda, para no volver a preguntarlo
@@ -54,12 +54,24 @@ export async function POST(req: Request) {
       }, { status: 200 });
     }
 
-    const ruta = await consultarRuta({ edoOrigen: o.estado, ciudadOrigen: po.codigo, edoDestino: d.estado, ciudadDestino: pd.codigo, vehiculo: String(vehiculo || "12") });
+    const veh = String(vehiculo || "12");
+    const ruta = await consultarRuta({ edoOrigen: o.estado, ciudadOrigen: po.codigo, edoDestino: d.estado, ciudadDestino: pd.codigo, vehiculo: veh });
+
+    // Si se descarga fuera de la capital del estado, la unidad tiene que moverse vacía hasta la
+    // capital para buscar carga de regreso: ese tramo también cuesta y se cotiza.
+    const capital = CAPITALES_SICT[d.estado];
+    let reposicion: { km: number; casetas: number; destino: string } | null = null;
+    if (capital && capital.codigo !== pd.codigo) {
+      try {
+        const r = await consultarRuta({ edoOrigen: d.estado, ciudadOrigen: pd.codigo, edoDestino: d.estado, ciudadDestino: capital.codigo, vehiculo: veh });
+        reposicion = { km: r.km, casetas: r.casetas, destino: capital.nombre };
+      } catch { reposicion = null; }
+    }
     // recordar los puntos usados para la próxima cotización de esta misma población
     await Promise.all([guardarNodo(origenId, o.estado, po.codigo, po.nombre), guardarNodo(destinoId, d.estado, pd.codigo, pd.nombre)]);
     const exacto = { origen: po.nombre, destino: pd.nombre };
     return NextResponse.json({
-      ok: true, ...ruta, punto: exacto,
+      ok: true, ...ruta, punto: exacto, reposicion,
       aproximado: !(no.length && mejorNodoExacto(o.municipio, po.nombre) && mejorNodoExacto(d.municipio, pd.nombre)),
       fuente: "SICT · Rutas punto a punto (Traza tu ruta)",
       estadoOrigen: o.estado, estadoDestino: d.estado, nodosOrigen: no, nodosDestino: nd,
