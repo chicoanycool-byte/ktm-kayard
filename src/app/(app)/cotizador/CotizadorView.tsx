@@ -5,7 +5,7 @@ import { fecha, money } from "@/lib/format";
 import { Btn, C, Campo, Card, Dato, Grid, Modal, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 import SelectBuscable from "@/components/SelectBuscable";
 import {
-  UNIDADES, TIPOS_VIAJE, RETORNOS, RETORNO_TEXTO, calcular, condicionesTexto, margenSugerido, referenciaKTM, tipoViajeSugerido,
+  UNIDADES, TIPOS_VIAJE, RETORNOS, RETORNO_TEXTO, calcular, condicionesTexto, margenEnPorcentaje, margenSugerido, porcentajeAMargen, referenciaKTM, tipoViajeSugerido,
   type ComparativoKTM, type ConfigCotizador, type Desglose, type Retorno, type TipoViaje, type Unidad,
 } from "@/lib/cotizador";
 
@@ -115,13 +115,15 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const ref = referenciaKTM(comparativo);
 
   const refCosto = baseHistorial && ref && ref.costo > 0 ? ref.costo : 0;
+  const margenProveedorSugerido = margenEnPorcentaje(cfg.margenes[unidad][tipoViaje].proveedor);
   // el cálculo es barato: lo memoiza el compilador de React
   const d = calcular({
     unidad, tipo_viaje: tipoViaje, km: num(km), retorno, casetas: num(casetas), personas: num(personas) || 1,
     km_reposicion: num(kmRepo), casetas_reposicion: num(casetasRepo), peso_kg: num(peso) || undefined,
-    precio_combustible: precio, margen_proveedor: ajusteProv ? num(ajusteProv) / 100 : undefined,
+    precio_combustible: precio,
+    margen_proveedor: num(ajusteProv) > 0 ? porcentajeAMargen(num(ajusteProv)) : undefined,
     tarifa_proveedor_base: refCosto || undefined,
-    margen_empresa: num(margenBny) > 0 ? 1 - Math.min(num(margenBny), 90) / 100 : undefined,
+    margen_empresa: num(margenBny) > 0 ? porcentajeAMargen(num(margenBny)) : undefined,
   }, cfg);
 
   const difRef = ref && ref.costo > 0 ? ((d.tarifa_proveedor - ref.costo) / ref.costo) * 100 : null;
@@ -339,8 +341,11 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <Campo label="Descripción de la unidad (en la carta)" span={2}>
               <input value={descUnidad} onChange={(e) => setDescUnidad(e.target.value)} style={inputStyle} />
             </Campo>
-            <Campo label={`Margen proveedor % (base ${Math.round(cfg.margenes[unidad][tipoViaje].proveedor * 100)})`}>
-              <input value={ajusteProv} onChange={(e) => setAjusteProv(e.target.value)} placeholder={String(Math.round(cfg.margenes[unidad][tipoViaje].proveedor * 100))} inputMode="decimal" style={inputStyle} />
+            <Campo label="Margen del transportista (%)">
+              <input value={ajusteProv} onChange={(e) => setAjusteProv(e.target.value)} placeholder={`${margenProveedorSugerido}`} inputMode="decimal" style={inputStyle} />
+              <span style={{ fontSize: 11, color: C.muted }}>
+                {refCosto > 0 ? "No se usa: esta ruta se está cotizando con tu tarifa real." : `Déjalo vacío para usar el ${margenProveedorSugerido}% de los parámetros.`}
+              </span>
             </Campo>
             <Campo label={`Margen de utilidad ${cfg.empresa.nombre.split(" ")[0]} (%)`}>
               <input value={margenBny} onChange={(e) => setMargenBny(e.target.value)} placeholder="déjalo vacío para no sumarlo" inputMode="decimal" style={inputStyle} />
@@ -414,7 +419,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             {fila("Costo total operativo", money(d.costo_operativo), { fuerte: true })}
             <div style={{ height: 10 }} />
             <p style={{ margin: "0 0 0.5rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>PROPUESTA</p>
-            {fila(refCosto > 0 ? "Tarifa del transportista (lo que pagas hoy en esta ruta)" : `Tarifa del transportista (fórmula, ${Math.round((1 - d.margen_proveedor) * 100)}% de margen para él)`, money(d.tarifa_proveedor))}
+            {fila(refCosto > 0 ? "Tarifa del transportista (lo que pagas hoy en esta ruta)" : `Tarifa del transportista (fórmula, ${margenEnPorcentaje(d.margen_proveedor)}% de margen para él)`, money(d.tarifa_proveedor))}
             {num(margenBny) > 0 && fila(`Margen de utilidad ${cfg.empresa.nombre.split(" ")[0]} (${num(margenBny)}%)`, money(d.utilidad_empresa))}
             {fila(num(margenBny) > 0 ? "Tarifa al cliente" : "Tarifa al cliente (sin margen propio)", money(d.tarifa_cliente), { fuerte: true })}
             {fila(`IVA ${Math.round(cfg.iva * 100)}%`, money(d.iva))}

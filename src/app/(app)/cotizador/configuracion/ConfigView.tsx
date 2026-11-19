@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, C, Campo, Card, Grid, InputNumero, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
-import { CONFIG_DEFAULT, TIPOS_VIAJE, UNIDADES, type ConfigCotizador, type ParamUnidad, type Unidad } from "@/lib/cotizador";
+import { CONFIG_DEFAULT, TIPOS_VIAJE, UNIDADES, margenEnPorcentaje, porcentajeAMargen, type ConfigCotizador, type ParamUnidad, type Unidad } from "@/lib/cotizador";
 
 export default function ConfigView({ config }: { config: ConfigCotizador }) {
   const supabase = createClient();
@@ -25,6 +25,11 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
 
   const campoNum = (valor: number, onChange: (v: number) => void, ancho = 92) => (
     <InputNumero valor={valor} onChange={onChange} ancho={ancho} />
+  );
+
+  // Los márgenes se guardan como divisor (0.60) pero se capturan como porcentaje (40 %)
+  const campoPct = (divisor: number, onChange: (v: number) => void) => (
+    <InputNumero valor={margenEnPorcentaje(divisor)} ancho={70} onChange={(p) => onChange(porcentajeAMargen(p))} />
   );
 
   return (
@@ -100,22 +105,24 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
       </Card>
 
       <Card style={{ marginBottom: "1rem", overflowX: "auto" }}>
-        <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>MÁRGENES (0.85 = la tarifa se divide entre 0.85, o sea 15 % de margen)</p>
-        <Tabla columnas={["Unidad", ...TIPOS_VIAJE.flatMap((t) => [`${t} · proveedor`, `${t} · venta sugerida`])]}>
+        <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>MÁRGENES DE UTILIDAD (en % sobre la tarifa)</p>
+        <Tabla columnas={["Unidad", ...TIPOS_VIAJE.flatMap((t) => [`${t} · proveedor %`, `${t} · venta sugerida %`])]}>
           {UNIDADES.map((u, i) => (
             <Tr key={u} i={i}>
               <Td fuerte>{cfg.unidades[u].nombre}</Td>
               {TIPOS_VIAJE.flatMap((t) => [
-                <Td key={t + "p"}>{campoNum(cfg.margenes[u][t].proveedor, (v) => setMargen(u, t, "proveedor", v), 70)}</Td>,
-                <Td key={t + "e"}>{campoNum(cfg.margenes[u][t].empresa, (v) => setMargen(u, t, "empresa", v), 70)}</Td>,
+                <Td key={t + "p"}>{campoPct(cfg.margenes[u][t].proveedor, (v) => setMargen(u, t, "proveedor", v))}</Td>,
+                <Td key={t + "e"}>{campoPct(cfg.margenes[u][t].empresa, (v) => setMargen(u, t, "empresa", v))}</Td>,
               ])}
             </Tr>
           ))}
         </Tabla>
         <p style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>
-          El de proveedor es el margen que se le reconoce al transportista cuando la tarifa se calcula con la fórmula; si la ruta ya tiene historial en KTM,
-          el cotizador usa lo que realmente pagas y este número no interviene. El de venta solo se sugiere en pantalla: el margen propio se suma únicamente
-          si se captura en la cotización. Los valores de venta vienen de tu historial: tráiler 17 %, 1.5 ton 25 %, torton y rabón 14 %.
+          Se capturan como porcentaje de la tarifa, igual que el margen de tus reportes (utilidad ÷ venta). Un 40 % quiere decir que la tarifa sale de dividir
+          el costo entre 0.60, o sea 66.7 % arriba del costo. El de proveedor es el margen que se le reconoce al transportista cuando la tarifa se calcula con
+          la fórmula; si la ruta ya tiene historial en KTM, el cotizador usa lo que realmente pagas y este número no interviene. El de venta solo se sugiere
+          en pantalla: tu margen se suma únicamente si lo capturas en la cotización. Los porcentajes de venta vienen de tu historial: tráiler 17 %, 1.5 ton 25 %,
+          torton y rabón 14 %.
         </p>
       </Card>
 

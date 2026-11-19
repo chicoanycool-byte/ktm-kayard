@@ -209,10 +209,15 @@ export function rendimientoPorPeso(u: ParamUnidad, peso_kg?: number | null): num
   return vacio - (vacio - cargado) * (peso / cap);
 }
 
+// Los márgenes se guardan como divisor (0.60) y se capturan como porcentaje de la tarifa (40 %):
+// dividir entre 0.60 deja una utilidad de 40 % de la tarifa, que es 66.7 % arriba del costo.
+export const margenEnPorcentaje = (divisor: number) => Math.round((1 - (divisor || 1)) * 1000) / 10;
+export const porcentajeAMargen = (pct: number) => 1 - Math.min(Math.max(Number(pct) || 0, 0), 90) / 100;
+
 // Margen de venta que sugiere el historial de KTM para esa unidad (en % sobre la venta)
 export function margenSugerido(cfg: ConfigCotizador, unidad: Unidad, tipo: TipoViaje): number {
   const e = cfg.margenes[unidad]?.[tipo]?.empresa;
-  return e && e > 0 && e < 1 ? Math.round((1 - e) * 1000) / 10 : 0;
+  return e && e > 0 && e < 1 ? margenEnPorcentaje(e) : 0;
 }
 
 // Sugerencia de tipo de viaje por distancia (el usuario puede cambiarla)

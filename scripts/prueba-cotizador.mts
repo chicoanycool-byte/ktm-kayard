@@ -1,6 +1,6 @@
 // Pruebas de la fórmula del cotizador: kilómetros reales, rendimiento por peso,
 // reposición vacía a la capital, mínimo del operador y factor de casetas.
-import { calcular, CONFIG_DEFAULT as cfg, rendimientoPorPeso, type EntradaCotizacion } from "../src/lib/cotizador.ts";
+import { calcular, CONFIG_DEFAULT as cfg, margenEnPorcentaje, porcentajeAMargen, rendimientoPorPeso, type EntradaCotizacion } from "../src/lib/cotizador.ts";
 
 let fallas = 0;
 const ok = (nombre: string, cond: boolean, extra = "") => {
@@ -76,6 +76,18 @@ const redondeo = calcular(base({ km: 333.33, casetas: 777.77 }), cfg);
 ok("nada se redondea para abajo", redondeo.casetas >= 777.77 * 1.1 && redondeo.casetas < 777.77 * 1.1 + 1, String(redondeo.casetas));
 ok("el IVA queda exacto sobre la base", Math.abs(redondeo.iva - redondeo.tarifa_cliente * cfg.iva) < 0.005);
 ok("el total es base más IVA", Math.abs(redondeo.total - (redondeo.tarifa_cliente + redondeo.iva)) < 0.005);
+
+// Márgenes capturados como porcentaje
+for (const [divisor, pct] of [[0.6, 40], [0.7, 30], [0.74, 26], [0.83, 17], [0.75, 25], [0.86, 14]] as const) {
+  ok(`${divisor} se muestra como ${pct}%`, margenEnPorcentaje(divisor) === pct, String(margenEnPorcentaje(divisor)));
+  ok(`${pct}% se guarda como ${divisor}`, Math.abs(porcentajeAMargen(pct) - divisor) < 1e-9, String(porcentajeAMargen(pct)));
+}
+ok("un margen de 40% deja 40% de la tarifa como utilidad", (() => {
+  const d = calcular(base({ margen_proveedor: porcentajeAMargen(40) }), cfg);
+  return Math.abs(d.utilidad_proveedor / d.tarifa_proveedor - 0.4) < 0.001;
+})());
+ok("capturar 0% equivale a no poner margen", porcentajeAMargen(0) === 1);
+ok("el porcentaje se topa en 90", porcentajeAMargen(150) === porcentajeAMargen(90));
 
 console.log(fallas === 0 ? "\nTodo bien." : `\n${fallas} falla(s).`);
 process.exit(fallas === 0 ? 0 : 1);
