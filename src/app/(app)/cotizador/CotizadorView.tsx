@@ -60,7 +60,6 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const [descUnidad, setDescUnidad] = useState(config.unidades.trailer.descripcion_carta);
   const [ajusteProv, setAjusteProv] = useState("");
   const [margenBny, setMargenBny] = useState("");      // margen de utilidad de Bonyard; vacío = no se suma
-  const [baseHistorial, setBaseHistorial] = useState(true); // tarifa proveedor según el historial de KTM
 
   // ── Precio de combustible del día
   const [combustible, setCombustible] = useState<{ gasolina: number; diesel: number; fuente: string; fecha: string } | null>(null);
@@ -114,15 +113,18 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
   const comparativo = origenId && destinoId ? comp : null;
   const ref = referenciaKTM(comparativo);
 
-  const refCosto = baseHistorial && ref && ref.costo > 0 ? ref.costo : 0;
   const margenProveedorSugerido = margenEnPorcentaje(cfg.margenes[unidad][tipoViaje].proveedor);
+  const primerNombre = cfg.empresa.nombre.split(" ")[0];
+  // Lo que daría la tarifa si en lugar de la fórmula se partiera de lo que se paga hoy en la ruta
+  const sobreLoQuePagas = ref && ref.costo > 0
+    ? calcular({ unidad, tipo_viaje: tipoViaje, km: num(km), retorno, casetas: num(casetas), personas: num(personas) || 1, precio_combustible: precio, tarifa_proveedor_base: ref.costo, margen_empresa: num(margenBny) > 0 ? porcentajeAMargen(num(margenBny)) : undefined }, cfg)
+    : null;
   // el cálculo es barato: lo memoiza el compilador de React
   const d = calcular({
     unidad, tipo_viaje: tipoViaje, km: num(km), retorno, casetas: num(casetas), personas: num(personas) || 1,
     km_reposicion: num(kmRepo), casetas_reposicion: num(casetasRepo), peso_kg: num(peso) || undefined,
     precio_combustible: precio,
     margen_proveedor: num(ajusteProv) > 0 ? porcentajeAMargen(num(ajusteProv)) : undefined,
-    tarifa_proveedor_base: refCosto || undefined,
     margen_empresa: num(margenBny) > 0 ? porcentajeAMargen(num(margenBny)) : undefined,
   }, cfg);
 
@@ -344,7 +346,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <Campo label="Margen del transportista (%)">
               <input value={ajusteProv} onChange={(e) => setAjusteProv(e.target.value)} placeholder={`${margenProveedorSugerido}`} inputMode="decimal" style={inputStyle} />
               <span style={{ fontSize: 11, color: C.muted }}>
-                {refCosto > 0 ? "No se usa: esta ruta se está cotizando con tu tarifa real." : `Déjalo vacío para usar el ${margenProveedorSugerido}% de los parámetros.`}
+                {`Déjalo vacío para usar el ${margenProveedorSugerido}% de los parámetros.`}
               </span>
             </Campo>
             <Campo label={`Margen de utilidad ${cfg.empresa.nombre.split(" ")[0]} (%)`}>
@@ -419,14 +421,17 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             {fila("Costo total operativo", money(d.costo_operativo), { fuerte: true })}
             <div style={{ height: 10 }} />
             <p style={{ margin: "0 0 0.5rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>PROPUESTA</p>
-            {fila(refCosto > 0 ? "Tarifa del transportista (lo que pagas hoy en esta ruta)" : `Tarifa del transportista (fórmula, ${margenEnPorcentaje(d.margen_proveedor)}% de margen para él)`, money(d.tarifa_proveedor))}
-            {num(margenBny) > 0 && fila(`Margen de utilidad ${cfg.empresa.nombre.split(" ")[0]} (${num(margenBny)}%)`, money(d.utilidad_empresa))}
-            {fila(num(margenBny) > 0 ? "Tarifa al cliente" : "Tarifa al cliente (sin margen propio)", money(d.tarifa_cliente), { fuerte: true })}
+            {fila(`+ Margen del transportista (${margenEnPorcentaje(d.margen_proveedor)}%)`, money(d.utilidad_proveedor))}
+            {fila("= Tarifa del transportista", money(d.tarifa_proveedor), { fuerte: true })}
+            {num(margenBny) > 0
+              ? fila(`+ Margen de utilidad ${primerNombre} (${num(margenBny)}%)`, money(d.utilidad_empresa))
+              : fila(`+ Margen de utilidad ${primerNombre}`, "sin capturar · $0", { color: C.amber })}
+            {fila("= Tarifa al cliente", money(d.tarifa_cliente), { fuerte: true })}
             {fila(`IVA ${Math.round(cfg.iva * 100)}%`, money(d.iva))}
             {fila("Total a facturar", money(d.total), { fuerte: true, color: C.green })}
             <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 12, color: C.muted }}>
-              <span>{refCosto > 0 ? "Margen del transportista sobre tu costo estimado" : "Utilidad proveedor"}: <b style={{ color: d.utilidad_proveedor >= 0 ? C.green : C.amber }}>{money(d.utilidad_proveedor)}</b></span>
-              <span>Tu utilidad: <b style={{ color: C.green }}>{money(d.utilidad_empresa)}</b></span>
+              <span>Utilidad del transportista: <b style={{ color: C.green }}>{money(d.utilidad_proveedor)}</b></span>
+              <span>Tu utilidad: <b style={{ color: d.utilidad_empresa > 0 ? C.green : C.amber }}>{money(d.utilidad_empresa)}</b></span>
             </div>
           </Card>
 
@@ -449,12 +454,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
                   </p>
                 )}
                 {comparativo!.servicios.ultimo && <p style={{ margin: "8px 0 0", fontSize: 12, color: C.muted }}>Último: {comparativo!.servicios.ultimo.id_track} · {comparativo!.servicios.ultimo.proveedor} · {money(comparativo!.servicios.ultimo.costo)} · {fecha(comparativo!.servicios.ultimo.fecha)}</p>}
-                <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, fontSize: 13, cursor: "pointer" }}>
-                  <input type="checkbox" checked={baseHistorial} onChange={(e) => setBaseHistorial(e.target.checked)} style={{ marginTop: 3 }} />
-                  <span>Cotizar sobre esta tarifa real en lugar de la fórmula de costos.
-                    <span style={{ color: C.muted }}> La fórmula da {money(d.costo_operativo / (cfg.margenes[unidad][tipoViaje].proveedor || 1))}; aquí pagas {money(ref!.costo)}.</span>
-                  </span>
-                </label>
+                {sobreLoQuePagas && fila("Partiendo de esta tarifa, al cliente saldría", money(sobreLoQuePagas.tarifa_cliente))}
               </>
             )}
           </Card>
