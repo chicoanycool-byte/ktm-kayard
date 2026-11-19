@@ -56,6 +56,28 @@ export function Card({ children, style }: { children: ReactNode; style?: CSSProp
   return <div style={{ backgroundColor: C.card, borderRadius: 12, padding: "1.25rem", ...style }}>{children}</div>;
 }
 
+// Campo numérico. Mientras se teclea conserva el texto tal cual, de modo que el punto
+// decimal no se borra al escribir "3." camino a "3.6"; hacia afuera siempre entrega número.
+export function InputNumero({ valor, onChange, ancho, estilo }: {
+  valor: number; onChange: (v: number) => void; ancho?: number; estilo?: CSSProperties;
+}) {
+  const [texto, setTexto] = useState(() => String(valor ?? 0));
+  const aNumero = (t: string) => { const n = Number(t); return Number.isFinite(n) ? n : 0; };
+  return (
+    <input
+      value={texto}
+      inputMode="decimal"
+      onChange={(e) => {
+        const limpio = e.target.value.replace(/,/g, "").replace(/[^\d.-]/g, "");
+        setTexto(limpio);
+        onChange(aNumero(limpio));
+      }}
+      onBlur={() => setTexto(String(aNumero(texto)))}
+      style={{ ...inputStyle, ...(ancho ? { width: ancho, padding: "0.3rem 0.5rem", textAlign: "right" } : {}), ...estilo }}
+    />
+  );
+}
+
 export function Campo({ label, children, span }: { label: string; children: ReactNode; span?: number }) {
   return (
     <div style={{ gridColumn: span ? `span ${span}` : undefined, minWidth: 0 }}>

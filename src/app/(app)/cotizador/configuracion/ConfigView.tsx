@@ -1,15 +1,14 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Btn, C, Campo, Card, Grid, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
+import { Btn, C, Campo, Card, Grid, InputNumero, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 import { CONFIG_DEFAULT, TIPOS_VIAJE, UNIDADES, type ConfigCotizador, type ParamUnidad, type Unidad } from "@/lib/cotizador";
-
-const n = (v: string) => Number(v.replace(/,/g, "")) || 0;
 
 export default function ConfigView({ config }: { config: ConfigCotizador }) {
   const supabase = createClient();
   const [cfg, setCfg] = useState<ConfigCotizador>(config);
   const [guardando, setGuardando] = useState(false);
+  const [reinicio, setReinicio] = useState(0);
   const [msg, setMsg] = useState("");
 
   const setUnidad = (u: Unidad, campo: keyof ParamUnidad, valor: string | number) =>
@@ -25,12 +24,11 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
   };
 
   const campoNum = (valor: number, onChange: (v: number) => void, ancho = 92) => (
-    <input value={String(valor)} onChange={(e) => onChange(n(e.target.value))} inputMode="decimal"
-      style={{ ...inputStyle, width: ancho, padding: "0.3rem 0.5rem", textAlign: "right" }} />
+    <InputNumero valor={valor} onChange={onChange} ancho={ancho} />
   );
 
   return (
-    <div>
+    <div key={reinicio}>
       <Titulo accion={<div style={{ display: "flex", gap: 8 }}>
         <Btn variante="secundario" href="/cotizador">← Volver</Btn>
         <Btn onClick={guardar} disabled={guardando}>{guardando ? "Guardando…" : "Guardar parámetros"}</Btn>
@@ -40,16 +38,16 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
       <Card style={{ marginBottom: "1rem" }}>
         <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>GENERALES</p>
         <Grid cols={3}>
-          <Campo label="Viáticos por persona / día"><input value={String(cfg.viaticos_por_persona)} onChange={(e) => setCfg({ ...cfg, viaticos_por_persona: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Factor sobre casetas de CAPUFE"><input value={String(cfg.factor_casetas)} onChange={(e) => setCfg({ ...cfg, factor_casetas: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Días mínimos por viaje"><input value={String(cfg.dias_minimos)} onChange={(e) => setCfg({ ...cfg, dias_minimos: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="IVA (0.16)"><input value={String(cfg.iva)} onChange={(e) => setCfg({ ...cfg, iva: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Vigencia (días)"><input value={String(cfg.vigencia_dias)} onChange={(e) => setCfg({ ...cfg, vigencia_dias: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Horas libres carga"><input value={String(cfg.horas_libres_carga)} onChange={(e) => setCfg({ ...cfg, horas_libres_carga: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Horas libres descarga"><input value={String(cfg.horas_libres_descarga)} onChange={(e) => setCfg({ ...cfg, horas_libres_descarga: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Días de crédito"><input value={String(cfg.dias_credito)} onChange={(e) => setCfg({ ...cfg, dias_credito: n(e.target.value) })} style={inputStyle} /></Campo>
-          <Campo label="Gasolina de respaldo ($/L)"><input value={String(cfg.combustible.gasolina)} onChange={(e) => setCfg({ ...cfg, combustible: { ...cfg.combustible, gasolina: n(e.target.value) } })} style={inputStyle} /></Campo>
-          <Campo label="Diésel de respaldo ($/L)"><input value={String(cfg.combustible.diesel)} onChange={(e) => setCfg({ ...cfg, combustible: { ...cfg.combustible, diesel: n(e.target.value) } })} style={inputStyle} /></Campo>
+          <Campo label="Viáticos por persona / día"><InputNumero valor={cfg.viaticos_por_persona} onChange={(v) => setCfg({ ...cfg, viaticos_por_persona: v })} /></Campo>
+          <Campo label="Factor sobre casetas de CAPUFE"><InputNumero valor={cfg.factor_casetas} onChange={(v) => setCfg({ ...cfg, factor_casetas: v })} /></Campo>
+          <Campo label="Días mínimos por viaje"><InputNumero valor={cfg.dias_minimos} onChange={(v) => setCfg({ ...cfg, dias_minimos: v })} /></Campo>
+          <Campo label="IVA (0.16)"><InputNumero valor={cfg.iva} onChange={(v) => setCfg({ ...cfg, iva: v })} /></Campo>
+          <Campo label="Vigencia (días)"><InputNumero valor={cfg.vigencia_dias} onChange={(v) => setCfg({ ...cfg, vigencia_dias: v })} /></Campo>
+          <Campo label="Horas libres carga"><InputNumero valor={cfg.horas_libres_carga} onChange={(v) => setCfg({ ...cfg, horas_libres_carga: v })} /></Campo>
+          <Campo label="Horas libres descarga"><InputNumero valor={cfg.horas_libres_descarga} onChange={(v) => setCfg({ ...cfg, horas_libres_descarga: v })} /></Campo>
+          <Campo label="Días de crédito"><InputNumero valor={cfg.dias_credito} onChange={(v) => setCfg({ ...cfg, dias_credito: v })} /></Campo>
+          <Campo label="Gasolina de respaldo ($/L)"><InputNumero valor={cfg.combustible.gasolina} onChange={(v) => setCfg({ ...cfg, combustible: { ...cfg.combustible, gasolina: v } })} /></Campo>
+          <Campo label="Diésel de respaldo ($/L)"><InputNumero valor={cfg.combustible.diesel} onChange={(v) => setCfg({ ...cfg, combustible: { ...cfg.combustible, diesel: v } })} /></Campo>
         </Grid>
         <p style={{ fontSize: 12, color: C.muted, marginTop: 10 }}>Los precios de respaldo solo se usan si no se puede consultar el precio oficial del día.</p>
       </Card>
@@ -123,7 +121,7 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
 
       <div style={{ display: "flex", gap: 8 }}>
         <Btn onClick={guardar} disabled={guardando}>{guardando ? "Guardando…" : "Guardar parámetros"}</Btn>
-        <Btn variante="secundario" onClick={() => setCfg(CONFIG_DEFAULT)}>Restaurar valores del Excel</Btn>
+        <Btn variante="secundario" onClick={() => { setCfg(CONFIG_DEFAULT); setReinicio((r) => r + 1); }}>Restaurar valores de fábrica</Btn>
       </div>
     </div>
   );
