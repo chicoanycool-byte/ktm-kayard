@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ModalCancelar, { cancelarServicio } from "@/components/CancelarServicio";
 import { ESTATUS, ESTATUS_INFO, REQ_OPCIONES } from "@/lib/constants";
 import { fecha } from "@/lib/format";
 import { linkWhatsApp, msgCliente } from "@/lib/whatsapp";
@@ -127,12 +128,14 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
     router.refresh();
   }
 
-  async function cancelar(s: ServicioV) {
-    if (!confirm(`¿Cancelar el servicio ${s.id_track}?`)) return;
-    const { error } = await supabase.from("servicios").update({ estatus: "cancelado" }).eq("id", s.id);
-    if (!error) {
-      setServicios(servicios.map((x) => (x.id === s.id ? { ...x, estatus: "cancelado" } : x)));
-      setDetalle(null);
+  const [aCancelar, setACancelar] = useState<ServicioV | null>(null);
+
+  async function confirmarCancelacion(motivo: string) {
+    if (!aCancelar) return;
+    const err = await cancelarServicio(supabase, aCancelar.id, motivo);
+    if (!err) {
+      setServicios(servicios.map((x) => (x.id === aCancelar.id ? { ...x, estatus: "cancelado" } : x)));
+      setDetalle(null); setACancelar(null); router.refresh();
     }
   }
 
@@ -193,7 +196,7 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
             {(esAdmin || ["programado", "asignado"].includes(detalle.estatus)) && <Btn small href={`/asignar?id=${detalle.id}`}>{detalle.proveedor ? (esAdmin ? "Editar transporte" : "Cambiar transporte") : "Asignar transporte"}</Btn>}
             {(esAdmin || !["finalizado", "cancelado"].includes(detalle.estatus)) && <Btn small variante="secundario" onClick={() => abrir(detalle)}>Editar datos</Btn>}
             {detalle.estatus === "finalizado" && detalle.estatus_facturacion !== "facturado" && <Btn small variante="verde" onClick={() => facturar(detalle)}>Enviar a facturar</Btn>}
-            {detalle.estatus !== "cancelado" && (esAdmin || detalle.estatus !== "finalizado") && <Btn small variante="peligro" onClick={() => cancelar(detalle)}>Cancelar servicio</Btn>}
+            {detalle.estatus !== "cancelado" && (esAdmin || detalle.estatus !== "finalizado") && <Btn small variante="peligro" onClick={() => setACancelar(detalle)}>Cancelar servicio</Btn>}
           </>
         } />
       )}
@@ -258,6 +261,10 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
             </div>
           </form>
         </Modal>
+      )}
+
+      {aCancelar && (
+        <ModalCancelar idTrack={aCancelar.id_track} onCerrar={() => setACancelar(null)} onConfirmar={confirmarCancelacion} />
       )}
     </div>
   );

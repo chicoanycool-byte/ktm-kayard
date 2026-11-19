@@ -7,6 +7,7 @@ import { fecha, money, pct } from "@/lib/format";
 import { linkWhatsApp, msgFacturar } from "@/lib/whatsapp";
 import { enviarAFacturar } from "@/lib/facturacion";
 import { exportarExcel } from "@/lib/exportar";
+import ModalCancelar, { cancelarServicio, reactivarServicio } from "@/components/CancelarServicio";
 import type { ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, Card, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -48,8 +49,10 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
 
   const filtrados = useMemo(() => servicios.filter((s) => {
     const fact = s.estatus_facturacion || "por_facturar";
+    if (filtro === "cancelados") { if (s.estatus !== "cancelado") return false; }
+    else if (s.estatus === "cancelado") return false;   // no ensucian los totales de las demás vistas
     if (filtro === "pendientes" && !(s.estatus === "finalizado" && fact !== "facturado")) return false;
-    if (!["todos", "pendientes"].includes(filtro) && fact !== filtro) return false;
+    if (!["todos", "pendientes", "cancelados"].includes(filtro) && fact !== filtro) return false;
     const q = busqueda.toLowerCase();
     return [s.id_track, s.cliente, s.proveedor, s.factura_kayard, s.factura_proveedor].some((v) => (v || "").toLowerCase().includes(q));
   }), [servicios, busqueda, filtro]);
@@ -152,6 +155,29 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
 
   const num = (k: string) => Number(form[k] || 0);
 
+  // ── Cancelar un servicio (por ejemplo, cuando el cliente lo cancela)
+  const [aCancelar, setACancelar] = useState<ServicioV | null>(null);
+
+  const confirmarCancelacion = async (motivo: string) => {
+    if (!aCancelar) return;
+    const err = await cancelarServicio(supabase, aCancelar.id, motivo);
+    if (err) { setAviso(err); return; }
+    setServicios((l) => l.map((x) => (x.id === aCancelar.id ? { ...x, estatus: "cancelado" } : x)));
+    setSel((d) => (d && d.id === aCancelar.id ? { ...d, estatus: "cancelado" } : d));
+    setACancelar(null);
+    setAviso(`${aCancelar.id_track} quedó cancelado. Lo encuentras en el filtro "Cancelados".`);
+    router.refresh();
+  };
+
+  const quitarCancelacion = async (s: ServicioV) => {
+    if (!confirm(`¿Quitar la cancelación de ${s.id_track}?`)) return;
+    const { error, estatus } = await reactivarServicio(supabase, s.id, !!s.proveedor_id);
+    if (error) { setAviso(error); return; }
+    setServicios((l) => l.map((x) => (x.id === s.id ? { ...x, estatus } : x)));
+    setAviso(`${s.id_track} regresó al estatus ${estatus === "asignado" ? "asignado al transporte" : "programado"}.`);
+    router.refresh();
+  };
+
   // ── Descarga a Excel (respeta la búsqueda, el filtro de arriba y los filtros de columna)
   const [visibles, setVisibles] = useState<number[]>([]);
   const [bajando, setBajando] = useState(false);
@@ -228,6 +254,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
           <option value="pendientes">Finalizados por facturar</option>
           <option value="todos">Todos</option>
           {Object.entries(FACT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          <option value="cancelados">Cancelados</option>
         </select>
       </div>
       <Tabla onVisibles={setVisibles} columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Pago proveedor", ""]}>
@@ -246,7 +273,9 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <Td><span style={{ color: FACT[s.estatus_facturacion || "por_facturar"]?.color, fontWeight: 600, fontSize: 12 }}>{FACT[s.estatus_facturacion || "por_facturar"]?.label}</span></Td>
             <Td>{s.estatus_pago === "pagado" ? "Pagado" : "Pendiente"}</Td>
             <Td>
-              {s.estatus === "finalizado" && s.estatus_facturacion !== "facturado" ? (
+              {s.estatus === "cancelado" ? (
+                <span onClick={(e) => e.stopPropagation()}><Btn small variante="secundario" onClick={() => quitarCancelacion(s)}>Quitar cancelación</Btn></span>
+              ) : s.estatus === "finalizado" && s.estatus_facturacion !== "facturado" ? (
                 <span onClick={(e) => e.stopPropagation()}><Btn small variante="verde" onClick={() => enviarFacturar(s)}>Enviar a facturar</Btn></span>
               ) : s.estatus_facturacion === "facturado" ? (
                 <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
@@ -295,6 +324,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
                 <Campo label="Estatus facturación">
                   <select value={form.estatus_facturacion} onChange={(e) => setForm({ ...form, estatus_facturacion: e.target.value })} style={inputStyle}>
                     {Object.entries(FACT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          <option value="cancelados">Cancelados</option>
                   </select>
                 </Campo>
                 <Campo label="Pago al proveedor">
@@ -308,10 +338,20 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
               <Btn type="submit" disabled={loading} style={{ flex: 1 }}>{loading ? "Guardando…" : "Guardar"}</Btn>
               <Btn variante="verde" onClick={mandarFacturar} disabled={loading || sel.estatus !== "finalizado"} style={{ flex: 1 }}>{telFact ? `Mandar a facturar${nomFact ? ` (${nomFact})` : ""}` : "Configurar WhatsApp de facturación"}</Btn>
+              {sel.estatus !== "cancelado" && <Btn variante="peligro" onClick={() => setACancelar(sel)}>Cancelar servicio</Btn>}
             </div>
             {telFact && <p style={{ fontSize: 11, color: C.muted }}>Facturación: {telFact} · <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={configurarFacturacion}>cambiar</span></p>}
           </form>
         </Modal>
+      )}
+
+      {aCancelar && (
+        <ModalCancelar
+          idTrack={aCancelar.id_track}
+          facturado={aCancelar.estatus_facturacion === "facturado"}
+          onCerrar={() => setACancelar(null)}
+          onConfirmar={confirmarCancelacion}
+        />
       )}
     </div>
   );
