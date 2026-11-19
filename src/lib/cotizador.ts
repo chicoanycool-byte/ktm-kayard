@@ -42,6 +42,9 @@ export type ConfigCotizador = {
   empresa: { nombre: string; firma: string; ciudad: string; codigo_formato: string; version_formato: string; fecha_formato: string };
   combustible: { gasolina: number; diesel: number; fecha: string; fuente: string };
   viaticos_por_persona: number;
+  // Kilómetros que se suman a cada viaje por el recorrido urbano que la ruta punto a punto
+  // de la SICT no cuenta: salir de la planta a la carretera y de la carretera al domicilio.
+  km_extra: Record<TipoViaje, number>;
   dias_minimos: number;          // una unidad no se renta por menos de esto, aunque el viaje sea corto
   factor_casetas: number;        // margen sobre la tarifa de CAPUFE, que no siempre está al día
   factor_retorno_vacio: number;  // (anterior) ya no se usa: el retorno se cobra con kilómetros reales
@@ -65,6 +68,7 @@ export const CONFIG_DEFAULT: ConfigCotizador = {
   empresa: { nombre: "Bonyard Servicios SC", firma: "Carlos René Hernández", ciudad: "El Salto, Jalisco, México", codigo_formato: "FCV-03", version_formato: "01", fecha_formato: "03/JUL/25" },
   combustible: { gasolina: 24, diesel: 28.89, fecha: "", fuente: "Valor inicial del Excel" },
   viaticos_por_persona: 500,
+  km_extra: { Local: 20, Regional: 40, Foraneo: 50 },
   dias_minimos: 0.5,
   factor_casetas: 1.1,
   factor_retorno_vacio: 1.15,
@@ -115,6 +119,7 @@ export function mezclarConfig(guardado: unknown): ConfigCotizador {
   return {
     ...CONFIG_DEFAULT, ...g,
     empresa: { ...CONFIG_DEFAULT.empresa, ...(g.empresa || {}) },
+    km_extra: { ...CONFIG_DEFAULT.km_extra, ...(g.km_extra || {}) },
     combustible: { ...CONFIG_DEFAULT.combustible, ...(g.combustible || {}) },
     unidades, margenes,
     condiciones: g.condiciones && g.condiciones.length ? g.condiciones : CONFIG_DEFAULT.condiciones,
@@ -139,7 +144,7 @@ export type EntradaCotizacion = {
 };
 
 export type Desglose = {
-  km_cargados: number; km_vacios: number; km_total: number; rendimiento: number;
+  km_cargados: number; km_vacios: number; km_total: number; km_extra: number; rendimiento: number;
   dias: number; litros: number; combustible: number; operador: number; mantenimiento: number; viaticos: number; fijos: number; casetas: number;
   costo_operativo: number; margen_proveedor: number; tarifa_proveedor: number; margen_empresa: number; tarifa_cliente: number; iva: number; total: number;
   utilidad_proveedor: number; utilidad_empresa: number;
@@ -157,7 +162,8 @@ export function calcular(e: EntradaCotizacion, cfg: ConfigCotizador): Desglose {
 
   // Kilómetros reales del ciclo: lo cargado, el regreso y el vacío para reposicionar la unidad
   const reposicion = retorno === "sencillo" ? Math.max(0, Number(e.km_reposicion) || 0) : 0;
-  const km_cargados = retorno === "cargado" ? km * 2 : km;
+  const extra = Math.max(0, Number(cfg.km_extra?.[e.tipo_viaje]) || 0);
+  const km_cargados = (retorno === "cargado" ? km * 2 : km) + extra;
   const km_vacios = (retorno === "vacio" ? km : 0) + reposicion;
   const km_total = km_cargados + km_vacios;
 
@@ -189,7 +195,7 @@ export function calcular(e: EntradaCotizacion, cfg: ConfigCotizador): Desglose {
   const tarifa_cliente = arriba(me && me > 0 && me < 1 ? tarifa_proveedor / me : tarifa_proveedor);
   const iva = tarifa_cliente * cfg.iva;
   return {
-    km_cargados: r2(km_cargados), km_vacios: r2(km_vacios), km_total: r2(km_total), rendimiento: r2(rend_cargado),
+    km_cargados: r2(km_cargados), km_vacios: r2(km_vacios), km_total: r2(km_total), km_extra: extra, rendimiento: r2(rend_cargado),
     dias, litros: r2(litros), combustible: r2(combustible), operador: r2(operador), mantenimiento: r2(mantenimiento), viaticos: r2(viaticos), fijos: r2(fijos), casetas: r2(casetas),
     costo_operativo: costo_operativo,
     margen_proveedor: base > 0 ? r2(1 - costo_operativo / base) : mp,

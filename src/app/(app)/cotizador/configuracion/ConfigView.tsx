@@ -45,6 +45,11 @@ export default function ConfigView({ config }: { config: ConfigCotizador }) {
         <Grid cols={3}>
           <Campo label="Viáticos por persona / día"><InputNumero valor={cfg.viaticos_por_persona} onChange={(v) => setCfg({ ...cfg, viaticos_por_persona: v })} /></Campo>
           <Campo label="Factor sobre casetas de CAPUFE"><InputNumero valor={cfg.factor_casetas} onChange={(v) => setCfg({ ...cfg, factor_casetas: v })} /></Campo>
+          {TIPOS_VIAJE.map((t) => (
+            <Campo key={t} label={`Km extra · ${t}`}>
+              <InputNumero valor={cfg.km_extra[t]} onChange={(v) => setCfg({ ...cfg, km_extra: { ...cfg.km_extra, [t]: v } })} />
+            </Campo>
+          ))}
           <Campo label="Días mínimos por viaje"><InputNumero valor={cfg.dias_minimos} onChange={(v) => setCfg({ ...cfg, dias_minimos: v })} /></Campo>
           <Campo label="IVA (0.16)"><InputNumero valor={cfg.iva} onChange={(v) => setCfg({ ...cfg, iva: v })} /></Campo>
           <Campo label="Vigencia (días)"><InputNumero valor={cfg.vigencia_dias} onChange={(v) => setCfg({ ...cfg, vigencia_dias: v })} /></Campo>

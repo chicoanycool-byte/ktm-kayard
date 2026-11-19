@@ -412,6 +412,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
           <Card>
             <p style={{ margin: "0 0 0.5rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>COSTO OPERATIVO</p>
             {fila(`Kilómetros del ciclo`, `${d.km_cargados} cargados${d.km_vacios > 0 ? ` + ${d.km_vacios} vacíos` : ""} = ${d.km_total}`)}
+            {d.km_extra > 0 && fila(`Incluye ${d.km_extra} km de recorrido urbano (${tipoViaje})`, "", {})}
             {fila(`Combustible (${d.litros.toFixed(0)} L a $${precio.toFixed(2)})`, money(d.combustible))}
             {fila("Pago operador", money(d.operador))}
             {fila("Mantenimiento", money(d.mantenimiento))}

@@ -2,6 +2,7 @@
 // reposición vacía a la capital, mínimo del operador y factor de casetas.
 import { calcular, CONFIG_DEFAULT as cfg, margenEnPorcentaje, porcentajeAMargen, rendimientoPorPeso, type EntradaCotizacion } from "../src/lib/cotizador.ts";
 
+const EXTRA = cfg.km_extra.Foraneo; // los casos base son foráneos
 let fallas = 0;
 const ok = (nombre: string, cond: boolean, extra = "") => {
   if (!cond) { fallas++; console.log(`  ✗ ${nombre} ${extra}`); } else console.log(`  ✓ ${nombre}`);
@@ -14,16 +15,16 @@ const sencillo = calcular(base(), cfg);
 const vacio = calcular(base({ retorno: "vacio" }), cfg);
 const cargado = calcular(base({ retorno: "cargado" }), cfg);
 
-ok("sencillo cuenta solo los km cargados", sencillo.km_total === 400);
-ok("vacío completo duplica los km", vacio.km_total === 800 && vacio.km_vacios === 400);
-ok("ida y vuelta cargado duplica los km cargados", cargado.km_cargados === 800 && cargado.km_vacios === 0);
+ok("sencillo cuenta solo los km cargados", sencillo.km_total === 400 + EXTRA);
+ok("vacío completo duplica los km", vacio.km_total === 800 + EXTRA && vacio.km_vacios === 400);
+ok("ida y vuelta cargado duplica los km cargados", cargado.km_cargados === 800 + EXTRA && cargado.km_vacios === 0);
 ok("el vacío gasta menos combustible por km que lo cargado", vacio.combustible < sencillo.combustible * 2, `${vacio.combustible} vs ${sencillo.combustible * 2}`);
 ok("ida y vuelta cargado gasta más que ida y vuelta vacío", cargado.combustible > vacio.combustible);
 ok("las casetas se pagan en los dos sentidos", vacio.casetas === Math.ceil(1000 * 2 * 1.1), String(vacio.casetas));
 ok("las casetas suben 10% sobre CAPUFE", sencillo.casetas === 1100, String(sencillo.casetas));
 
 const conRepo = calcular(base({ km_reposicion: 120, casetas_reposicion: 300 }), cfg);
-ok("la reposición a la capital suma km vacíos", conRepo.km_vacios === 120 && conRepo.km_total === 520);
+ok("la reposición a la capital suma km vacíos", conRepo.km_vacios === 120 && conRepo.km_total === 520 + EXTRA);
 ok("la reposición suma sus casetas", conRepo.casetas === Math.ceil((1000 + 300) * 1.1), String(conRepo.casetas));
 ok("la reposición encarece el viaje", conRepo.costo_operativo > sencillo.costo_operativo);
 ok("la reposición no aplica si regresa vacío al origen", calcular(base({ retorno: "vacio", km_reposicion: 120 }), cfg).km_vacios === 400);
@@ -43,7 +44,7 @@ const local = calcular(base({ unidad: "camioneta_1_5", tipo_viaje: "Local", km: 
 ok("el viaje local paga el fijo del operador", local.operador === cfg.unidades.camioneta_1_5.operador_local);
 
 ok("la tarifa al cliente siempre cubre el costo", [sencillo, vacio, cargado, conRepo, corto, local].every((d) => d.tarifa_cliente > d.costo_operativo));
-ok("compatibilidad con cotizaciones guardadas (retorno_vacio)", calcular({ ...base(), retorno: undefined as unknown as EntradaCotizacion["retorno"], retorno_vacio: true }, cfg).km_total === 800);
+ok("compatibilidad con cotizaciones guardadas (retorno_vacio)", calcular({ ...base(), retorno: undefined as unknown as EntradaCotizacion["retorno"], retorno_vacio: true }, cfg).km_total === 800 + EXTRA);
 
 // Margen de Bonyard: solo suma si se captura
 const sinMargen = calcular(base(), cfg);
@@ -88,6 +89,15 @@ ok("un margen de 40% deja 40% de la tarifa como utilidad", (() => {
 })());
 ok("capturar 0% equivale a no poner margen", porcentajeAMargen(0) === 1);
 ok("el porcentaje se topa en 90", porcentajeAMargen(150) === porcentajeAMargen(90));
+
+// Kilómetros extra por recorrido urbano
+for (const [tipo, extra] of [["Local", 20], ["Regional", 40], ["Foraneo", 50]] as const) {
+  const d = calcular(base({ tipo_viaje: tipo, km: 100 }), cfg);
+  ok(`${tipo} suma ${extra} km`, d.km_cargados === 100 + extra && d.km_extra === extra, `${d.km_cargados} / ${d.km_extra}`);
+}
+ok("los km extra no se cobran dos veces en ida y vuelta", calcular(base({ tipo_viaje: "Foraneo", km: 100, retorno: "cargado" }), cfg).km_cargados === 250);
+ok("los km extra sí gastan combustible", calcular(base({ tipo_viaje: "Foraneo", km: 100 }), cfg).combustible > calcular(base({ tipo_viaje: "Local", km: 100 }), cfg).combustible);
+ok("los km extra no suman casetas", calcular(base({ tipo_viaje: "Foraneo", km: 100, casetas: 500 }), cfg).casetas === Math.ceil(500 * 1.1));
 
 console.log(fallas === 0 ? "\nTodo bien." : `\n${fallas} falla(s).`);
 process.exit(fallas === 0 ? 0 : 1);
