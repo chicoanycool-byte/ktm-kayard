@@ -63,7 +63,7 @@ export default function Layout({ children, userName, userRole, userInitial }: La
         </nav>
       </aside>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{ backgroundColor: "#0F2540", borderBottom: `1px solid ${C.line}`, padding: "0.65rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10, gap: 12 }}>
+        <header style={{ backgroundColor: "#0A0A0A", borderBottom: `1px solid ${C.line}`, padding: "0.65rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10, gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button className="ktm-burger" onClick={() => setAbiertoMovil(true)} style={{ display: "none", background: "none", border: `1px solid ${C.line}`, color: C.amber, borderRadius: 6, padding: "4px 10px", fontSize: 18, cursor: "pointer" }}>☰</button>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "white" }}>KTM <span className="ktm-hide-sm" style={{ fontWeight: 400, color: C.muted }}>· Kayard Transport Management</span></p>

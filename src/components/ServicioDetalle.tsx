@@ -135,7 +135,7 @@ export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false,
                   <a href={urlEvidencia(e.foto_path)} target="_blank" rel="noopener noreferrer" title="Ver en grande">
                     <div style={{ position: "relative" }}>
                       <img src={urlEvidencia(e.foto_path)} alt="evidencia" style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 8, border: `1px solid ${e.tipo === "documentos" ? "#FACC15" : C.line}` }} />
-                      {e.tipo === "documentos" && <span style={{ position: "absolute", left: 4, bottom: 4, background: "#FACC15", color: "#0A1628", fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>DOCUMENTO</span>}
+                      {e.tipo === "documentos" && <span style={{ position: "absolute", left: 4, bottom: 4, background: "#FACC15", color: "#000000", fontSize: 10, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>DOCUMENTO</span>}
                     </div>
                   </a>
                   <p style={{ margin: "4px 0", fontSize: 10, color: C.muted }}>{fechaHora(e.created_at)}</p>

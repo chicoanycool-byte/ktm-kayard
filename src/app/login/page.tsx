@@ -29,7 +29,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "#000000", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif" }}>
 
       {/* Fondo con patrón */}
       <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(42,109,168,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(245,166,35,0.08) 0%, transparent 40%)" }} />
@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div style={{ position: "relative", width: "100%", maxWidth: 420, padding: "0 1rem" }}>
 
         {/* Card */}
-        <div style={{ backgroundColor: "#1B3A5C", borderRadius: 20, padding: "2.5rem", border: "1px solid rgba(245,166,35,0.2)", boxShadow: "0 25px 50px rgba(0,0,0,0.5)" }}>
+        <div style={{ backgroundColor: "#151515", borderRadius: 20, padding: "2.5rem", border: "1px solid rgba(245,166,35,0.2)", boxShadow: "0 25px 50px rgba(0,0,0,0.5)" }}>
 
           {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
@@ -61,7 +61,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="usuario@kayard.com"
                 required
-                style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, fontSize: 14, backgroundColor: "#0F2540", color: "white", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, fontSize: 14, backgroundColor: "#0A0A0A", color: "white", boxSizing: "border-box" }}
               />
             </div>
 
@@ -75,12 +75,12 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, fontSize: 14, backgroundColor: "#0F2540", color: "white", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "0.75rem 1rem", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, fontSize: 14, backgroundColor: "#0A0A0A", color: "white", boxSizing: "border-box" }}
               />
             </div>
 
             {error && (
-              <div style={{ backgroundColor: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", padding: "0.75rem 1rem", borderRadius: 8, fontSize: 13 }}>
+              <div style={{ backgroundColor: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#FF5C5C", padding: "0.75rem 1rem", borderRadius: 8, fontSize: 13 }}>
                 {error}
               </div>
             )}
@@ -88,7 +88,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ width: "100%", padding: "0.875rem", backgroundColor: "#F5A623", color: "#0A1628", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", marginTop: "0.5rem", opacity: loading ? 0.8 : 1 }}
+              style={{ width: "100%", padding: "0.875rem", backgroundColor: "#F5A623", color: "#000000", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", marginTop: "0.5rem", opacity: loading ? 0.8 : 1 }}
             >
               {loading ? "Iniciando sesión..." : "Iniciar sesión"}
             </button>

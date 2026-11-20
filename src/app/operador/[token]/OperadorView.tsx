@@ -10,10 +10,10 @@ type Info = Record<string, any> & { evidencias: { path: string; fecha: string; t
 
 const PASOS = [
   { estatus: "llegada_carga", label: "Llegué a cargar", color: "#FB923C" },
-  { estatus: "en_transito", label: "Salí en tránsito", color: "#5BA3D9" },
+  { estatus: "en_transito", label: "Salí en tránsito", color: "#6BB6EC" },
   { estatus: "llegada_descarga", label: "Llegué a descargar", color: "#A78BFA" },
   { estatus: "entrega_documentos", label: "Entrega de documentos", color: "#FACC15" },
-  { estatus: "finalizado", label: "Finalizar viaje", color: "#22C55E" },
+  { estatus: "finalizado", label: "Finalizar viaje", color: "#2FD97B" },
 ];
 const ORDEN = ["programado", "asignado", "llegada_carga", "en_transito", "llegada_descarga", "entrega_documentos", "finalizado"];
 
@@ -104,7 +104,7 @@ export default function OperadorView({ token }: { token: string }) {
               return (
                 <button key={p.estatus} disabled={ocupado || hecho || info.estatus === "programado" || (p.estatus === "finalizado" && fotosDocs.length === 0)} onClick={() => avanzar(p.estatus)}
                   style={{ padding: "0.9rem", borderRadius: 10, border: "none", fontSize: 16, fontWeight: 700, cursor: "pointer",
-                    background: hecho ? "rgba(255,255,255,.08)" : p.color, color: hecho ? C.muted : "#0A1628", opacity: ocupado ? 0.6 : 1 }}>
+                    background: hecho ? "rgba(255,255,255,.08)" : p.color, color: hecho ? C.muted : "#000000", opacity: ocupado ? 0.6 : 1 }}>
                   {hecho ? "✔ " : ""}{p.label}
                 </button>
               );
@@ -114,7 +114,7 @@ export default function OperadorView({ token }: { token: string }) {
             <div style={{ marginTop: 12, padding: "0.9rem", borderRadius: 10, background: "rgba(250,204,21,0.1)", border: "1px solid #FACC15" }}>
               <p style={{ color: "#FACC15", fontWeight: 700, margin: "0 0 6px" }}>Fotos de los documentos ({fotosDocs.length})</p>
               <p style={{ color: C.text, fontSize: 13, margin: "0 0 10px" }}>Toma foto de cada documento de entrega (sellados/firmados). Se abre la cámara; puedes repetir para agregar más. Necesitas al menos una para finalizar el viaje.</p>
-              <label style={{ display: "block", padding: "0.9rem", borderRadius: 10, background: "#FACC15", color: "#0A1628", textAlign: "center", fontWeight: 800, cursor: "pointer" }}>
+              <label style={{ display: "block", padding: "0.9rem", borderRadius: 10, background: "#FACC15", color: "#000000", textAlign: "center", fontWeight: 800, cursor: "pointer" }}>
                 📷 Tomar foto de documento
                 <input type="file" accept="image/*" capture="environment" hidden disabled={ocupado}
                   onChange={(e) => { subirFotos(e.target.files, "documentos"); e.target.value = ""; }} />

@@ -14,10 +14,10 @@ export const ESTATUS_INFO: Record<Estatus, { label: string; bg: string; color: s
   programado:         { label: "Programado",             bg: "rgba(239,68,68,0.18)",  color: "#F87171" },
   asignado:           { label: "Asignado al transporte", bg: "rgba(245,166,35,0.2)",  color: "#F5A623" },
   llegada_carga:      { label: "Llegada a carga",        bg: "rgba(251,146,60,0.2)",  color: "#FB923C" },
-  en_transito:        { label: "En tránsito",            bg: "rgba(91,163,217,0.2)",  color: "#5BA3D9" },
+  en_transito:        { label: "En tránsito",            bg: "rgba(91,163,217,0.2)",  color: "#6BB6EC" },
   llegada_descarga:   { label: "Llegada a descarga",     bg: "rgba(167,139,250,0.2)", color: "#A78BFA" },
   entrega_documentos: { label: "Entrega de documentos",  bg: "rgba(250,204,21,0.18)", color: "#FACC15" },
-  finalizado:         { label: "Finalizado",             bg: "rgba(34,197,94,0.2)",   color: "#22C55E" },
+  finalizado:         { label: "Finalizado",             bg: "rgba(34,197,94,0.2)",   color: "#2FD97B" },
   cancelado:          { label: "Cancelado",              bg: "rgba(148,163,184,0.2)", color: "#94A3B8" },
 };
 

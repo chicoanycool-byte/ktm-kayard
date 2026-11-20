@@ -62,7 +62,7 @@ export async function exportarPDFTabla(titulo: string, subtitulo: string, column
 }
 
 // Captura un elemento de la pantalla (por ejemplo un tablero) y lo pone en un PDF, partido en hojas si es largo
-export async function exportarPDFElemento(el: HTMLElement, titulo: string, subtitulo: string, archivo: string, fondo = "#0F1E2E", orientacion: "horizontal" | "vertical" = "horizontal") {
+export async function exportarPDFElemento(el: HTMLElement, titulo: string, subtitulo: string, archivo: string, fondo = "#000000", orientacion: "horizontal" | "vertical" = "horizontal") {
   const html2canvas = (await import("html2canvas-pro")).default;
   const canvas = await html2canvas(el, { backgroundColor: fondo, scale: 2, useCORS: true });
   const doc = await encabezadoPDF(titulo, subtitulo, orientacion === "horizontal");

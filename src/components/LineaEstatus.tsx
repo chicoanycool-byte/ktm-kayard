@@ -68,7 +68,7 @@ export default function LineaEstatus({ estatus, bitacora, compacta = false }: {
               <span style={{
                 width: i === actual ? 9 : 7, height: i === actual ? 9 : 7, borderRadius: "50%",
                 background: hecho ? hechoColor : "rgba(255,255,255,0.18)",
-                boxShadow: i === actual && !cancelado ? `0 0 0 3px rgba(34,197,94,0.22)` : undefined,
+                boxShadow: i === actual && !cancelado ? `0 0 0 3px rgba(47,217,123,0.25)` : undefined,
               }} />
             </div>
           );
@@ -94,7 +94,7 @@ export default function LineaEstatus({ estatus, bitacora, compacta = false }: {
               <span style={{
                 position: "relative", width: 16, height: 16, borderRadius: "50%", background: hecho ? hechoColor : C.card,
                 border: `2px solid ${hecho ? hechoColor : "rgba(255,255,255,0.28)"}`,
-                boxShadow: esActual ? "0 0 0 5px rgba(34,197,94,0.2)" : undefined,
+                boxShadow: esActual ? "0 0 0 5px rgba(47,217,123,0.22)" : undefined,
               }} />
               <span style={{ marginTop: 10, color, display: "flex", alignItems: "center", justifyContent: "center", width: 46, height: 46, borderRadius: "50%", border: `2px solid ${color}` }}>
                 <Icono estatus={p} tam={26} />

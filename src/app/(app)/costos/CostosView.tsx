@@ -21,7 +21,7 @@ const CONCEPTOS = [
 const FACT: Record<string, { label: string; color: string }> = {
   por_facturar: { label: "Por facturar", color: "#F87171" },
   enviado: { label: "Enviado a facturar", color: "#F5A623" },
-  facturado: { label: "Facturado", color: "#22C55E" },
+  facturado: { label: "Facturado", color: "#2FD97B" },
 };
 
 type Form = Record<string, string>;

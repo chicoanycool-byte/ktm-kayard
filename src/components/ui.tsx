@@ -4,23 +4,24 @@ import { ESTATUS_INFO, type Estatus } from "@/lib/constants";
 
 // Paleta KTM (navy / ámbar)
 export const C = {
-  bg: "#0F1E2E",
-  side: "#0A1628",
-  card: "#1B3A5C",
-  card2: "#162F4A",
-  input: "#0F2540",
-  amber: "#F5A623",
-  line: "rgba(245,166,35,0.18)",
-  muted: "rgba(255,255,255,0.5)",
-  text: "rgba(255,255,255,0.85)",
-  red: "#EF4444",
-  green: "#22C55E",
-  blue: "#5BA3D9",
+  bg: "#000000",        // la página
+  side: "#070707",      // barra lateral
+  card: "#151515",      // tarjeta levantada
+  card2: "#0D0D0D",     // panel secundario
+  head: "#1F1F1F",      // encabezado de tabla, un paso más claro que los renglones
+  input: "#0A0A0A",
+  amber: "#F5A623",     // el color de la marca, no se mueve
+  line: "rgba(245,166,35,0.22)",
+  muted: "rgba(255,255,255,0.56)",
+  text: "rgba(255,255,255,0.92)",
+  red: "#FF5C5C",
+  green: "#2FD97B",
+  blue: "#6BB6EC",
 };
 
 export const inputStyle: CSSProperties = {
-  width: "100%", padding: "0.5rem 0.75rem", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8,
-  fontSize: 14, boxSizing: "border-box", backgroundColor: C.input, color: "white",
+  width: "100%", padding: "0.5rem 0.75rem", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8,
+  fontSize: 14, boxSizing: "border-box", backgroundColor: C.input, color: C.text,
 };
 
 export function Titulo({ children, accion }: { children: ReactNode; accion?: ReactNode }) {
@@ -239,7 +240,7 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
       <div style={{ backgroundColor: C.card, borderRadius: 12, overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ backgroundColor: C.side, borderBottom: "2px solid rgba(245,166,35,0.3)" }}>
+            <tr style={{ backgroundColor: C.head, borderBottom: "2px solid rgba(245,166,35,0.35)" }}>
               {columnas.map((c, idx) => {
                 const filtrable = c.trim() !== "" && hayFilas;
                 const on = !!filtros[idx];
@@ -380,7 +381,7 @@ function MenuFiltro({ titulo, x, y, valores, filtro, onAplicar, onCerrar }: {
 
 export function Tr({ children, i, onClick }: { children: ReactNode; i: number; onClick?: () => void }) {
   return (
-    <tr onClick={onClick} style={{ backgroundColor: i % 2 === 0 ? C.card : C.card2, borderBottom: "1px solid rgba(255,255,255,0.05)", cursor: onClick ? "pointer" : undefined }}>
+    <tr onClick={onClick} style={{ backgroundColor: i % 2 === 0 ? C.card : C.card2, borderBottom: "1px solid rgba(255,255,255,0.07)", cursor: onClick ? "pointer" : undefined }}>
       {children}
     </tr>
   );

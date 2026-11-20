@@ -23,10 +23,10 @@ export default async function DashboardPage() {
   const kpis = [
     { l: "Cargas hoy", v: String(cargasHoy), c: "#F5A623" },
     ...(["programado", "asignado", "en_transito"] as Estatus[]).map((e) => ({ l: ESTATUS_INFO[e].label, v: String(cuenta(e)), c: ESTATUS_INFO[e].color })),
-    { l: "Finalizados del mes", v: String(finMes), c: "#22C55E" },
+    { l: "Finalizados del mes", v: String(finMes), c: "#2FD97B" },
     ...(["admin", "direccion", "facturacion"].includes(perfil.role) ? [
       { l: "Venta del mes", v: money(ventaMes), c: "#F5A623" },
-      { l: "Utilidad del mes", v: money(utilMes), c: utilMes < 0 ? "#EF4444" : "#22C55E" },
+      { l: "Utilidad del mes", v: money(utilMes), c: utilMes < 0 ? "#FF5C5C" : "#2FD97B" },
     ] : []),
   ];
 
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "0.85rem", marginBottom: "1.75rem" }}>
         {kpis.map((k) => (
-          <div key={k.l} style={{ backgroundColor: "#1B3A5C", borderRadius: 12, padding: "1rem 1.1rem", borderLeft: `4px solid ${k.c}` }}>
+          <div key={k.l} style={{ backgroundColor: "#151515", borderRadius: 12, padding: "1rem 1.1rem", borderLeft: `4px solid ${k.c}` }}>
             <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{k.l}</p>
             <p style={{ margin: "0.35rem 0 0", fontSize: 26, fontWeight: 700, color: k.c }}>{k.v}</p>
           </div>
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       <h3 style={{ color: "white", fontSize: 16, margin: "0 0 0.75rem" }}>Menú</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.85rem" }}>
         {accesos.map((a) => (
-          <Link key={a.href} href={a.href} style={{ backgroundColor: "#1B3A5C", borderRadius: 14, padding: "1.1rem", textDecoration: "none", border: "1px solid rgba(245,166,35,0.12)", display: "flex", flexDirection: "column", gap: 6 }}>
+          <Link key={a.href} href={a.href} style={{ backgroundColor: "#151515", borderRadius: 14, padding: "1.1rem", textDecoration: "none", border: "1px solid rgba(245,166,35,0.12)", display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ fontSize: 28 }}>{a.icon}</span>
             <span style={{ color: "white", fontWeight: 600, fontSize: 14 }}>{a.label}</span>
             <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{a.grupo}</span>

@@ -30,8 +30,8 @@
     box-sizing: border-box;
   }
   body {
-    background-color: hsl(210 40% 98%);
-    color: hsl(215 25% 15%);
+    background-color: #000000;
+    color: rgba(255, 255, 255, 0.92);
     font-family: system-ui, sans-serif;
   }
 }

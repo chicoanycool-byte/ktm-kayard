@@ -35,7 +35,7 @@ export default function EnVivo({ segundos = 30, tablas = ["servicios", "servicio
 
   return (
     <span title={conectado ? "Conectado en tiempo real" : `Actualizando cada ${segundos} s`} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted }}>
-      <span style={{ width: 8, height: 8, borderRadius: "50%", background: conectado ? "#22C55E" : C.amber, boxShadow: conectado ? "0 0 6px #22C55E" : "none" }} />
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: conectado ? "#2FD97B" : C.amber, boxShadow: conectado ? "0 0 6px #2FD97B" : "none" }} />
       {conectado ? "En vivo" : `Cada ${segundos} s`}
       {ultima && ` · ${ultima.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
     </span>
