@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ESTATUS, ESTATUS_INFO, type Estatus } from "@/lib/constants";
 import { fecha, fechaHora, hora } from "@/lib/format";
 import EnVivo from "@/components/EnVivo";
+import LineaEstatus from "@/components/LineaEstatus";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, EstatusBadge, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -69,7 +70,7 @@ export default function MonitoreoView({ servicios: ini, esAdmin = false }: { ser
       <Tabla columnas={["Estatus", "ID TRACK", "Cliente", "Origen", "Unidad", "Carga", "Fecha carga", "Fecha descarga", "Transporte / operador", "Ubicación", "Actualizado", "Cambiar estatus"]}>
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i}>
-            <Td><EstatusBadge estatus={s.estatus} /></Td>
+            <Td><EstatusBadge estatus={s.estatus} /><LineaEstatus estatus={s.estatus} compacta /></Td>
             <Td fuerte><span onClick={() => setDetalle(s)} style={{ cursor: "pointer", textDecoration: "underline" }}>{s.id_track}</span></Td>
             <Td>{s.cliente}</Td>
             <Td>{s.origen} → {s.destino}</Td>

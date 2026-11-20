@@ -8,6 +8,7 @@ import { linkWhatsApp, msgCliente, msgOperador, msgProveedor } from "@/lib/whats
 import { descargarFoto, descargarTodas, nombresFotos } from "@/lib/fotos";
 import { bitacoraExcel, bitacoraPDF } from "@/lib/bitacora";
 import BitacoraEditor from "./BitacoraEditor";
+import LineaEstatus from "./LineaEstatus";
 import { Btn, C, Dato, EstatusBadge, Modal, Seccion, inputStyle } from "./ui";
 
 export type ServicioV = Record<string, any> & { id: string; id_track: string; estatus: string; token_operador: string };
@@ -72,6 +73,9 @@ export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false,
           </label>
         )}
       </div>
+
+      <div style={{ marginBottom: 16 }}><LineaEstatus estatus={s.estatus} bitacora={bitacora} /></div>
+
       <div style={g}>
         <Seccion titulo="Datos generales" />
         <Dato label="Cliente" valor={s.cliente} />
