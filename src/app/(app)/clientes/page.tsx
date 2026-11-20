@@ -1,13 +1,11 @@
-import BloqueoCliente, { type ClienteBloqueo } from "@/components/BloqueoCliente";
-import Crud from "@/components/Crud";
 import { requireRol } from "@/lib/session";
+import ClientesView from "./ClientesView";
 
 export default async function ClientesPage() {
   const { supabase, perfil } = await requireRol(["admin", "direccion", "ventas", "operaciones", "facturacion"]);
   const { data } = await supabase.from("clientes").select("*").order("nombre");
   return (
-    <Crud titulo="Catálogo de clientes" singular="cliente" tabla="clientes" filas={data || []}
-      extra={{ encabezado: "Cartera", render: (f) => <BloqueoCliente cliente={f as ClienteBloqueo} rol={perfil.role} /> }}
+    <ClientesView filas={data || []} rol={perfil.role}
       campos={[
         { key: "nombre", label: "Nombre del cliente", requerido: true },
         { key: "contacto_nombre", label: "Nombre del contacto" },
