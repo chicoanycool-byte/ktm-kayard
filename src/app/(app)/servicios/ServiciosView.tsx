@@ -23,7 +23,10 @@ const VACIO = {
   comentarios: "",
 };
 
-export default function ServiciosView({ servicios: ini, listas, esAdmin = false }: { servicios: ServicioV[]; listas: Record<string, Opcion[]>; esAdmin?: boolean }) {
+export default function ServiciosView({ servicios: ini, listas, esAdmin = false, bloqueados = [] }: {
+  servicios: ServicioV[]; listas: Record<string, Opcion[]>; esAdmin?: boolean;
+  bloqueados?: { id: string; nombre: string; bloqueo_motivo: string | null }[];
+}) {
   const [servicios, setServicios] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<string>("activos");
@@ -39,6 +42,7 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
   const [detalle, setDetalle] = useState<ServicioV | null>(null);
   const [recienCreado, setRecienCreado] = useState<ServicioV | null>(null);
   const [error, setError] = useState("");
+  const clienteBloqueado = bloqueados.find((b) => b.id === form.cliente_id);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -218,7 +222,14 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
           <form onSubmit={guardar}>
             <Grid cols={3}>
               <Seccion titulo="Datos generales" />
-              <Campo label="Cliente *">{sel("cliente_id", "clientes", true)}</Campo>
+              <Campo label="Cliente *">
+                {sel("cliente_id", "clientes", true)}
+                {clienteBloqueado && (
+                  <span style={{ display: "block", marginTop: 5, fontSize: 11, color: C.red, lineHeight: 1.35 }}>
+                    Cliente bloqueado: {clienteBloqueado.bloqueo_motivo || "cartera vencida"}. No se le pueden programar servicios hasta que Finanzas lo libere.
+                  </span>
+                )}
+              </Campo>
               <Campo label="Tipo de unidad *">{sel("tipo_unidad_id", "tipos_unidad", true)}</Campo>
               <Campo label="Tipo de carga *">{sel("tipo_carga_id", "tipos_carga", true)}</Campo>
               <Campo label="Costo de mercancía"><input type="number" step="0.01" min="0" value={form.costo_mercancia} onChange={set("costo_mercancia")} style={inputStyle} /></Campo>
@@ -256,7 +267,7 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false 
             </p>
             {error && <p style={{ color: C.red, fontSize: 13 }}>{error}</p>}
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <Btn type="submit" disabled={loading} style={{ flex: 1 }}>{loading ? "Guardando…" : "Guardar servicio"}</Btn>
+              <Btn type="submit" disabled={loading || (!editando && !!clienteBloqueado)} style={{ flex: 1 }}>{loading ? "Guardando…" : "Guardar servicio"}</Btn>
               <Btn variante="secundario" onClick={() => setAbierto(false)} style={{ flex: 1 }}>Cancelar</Btn>
             </div>
           </form>

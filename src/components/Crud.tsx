@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { money } from "@/lib/format";
@@ -19,8 +19,10 @@ export type CampoDef = {
 type Fila = Record<string, unknown> & { id: string; activo?: boolean };
 
 // Catálogo genérico: lista con búsqueda + alta/edición en modal + activar/desactivar
-export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, singular }: {
+export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, singular, extra }: {
   titulo: string; tabla: string; campos: CampoDef[]; filas: Fila[]; listas?: Record<string, Opcion[]>; singular: string;
+  // Columna propia al final del renglón, para acciones que no son del catálogo genérico
+  extra?: { encabezado: string; render: (fila: Fila) => ReactNode };
 }) {
   const [filas, setFilas] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
@@ -114,10 +116,11 @@ export default function Crud({ titulo, tabla, campos, filas: ini, listas = {}, s
           <input type="checkbox" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} /> Ver inactivos
         </label>
       </div>
-      <Tabla columnas={[...colsTabla.map((c) => c.label), ""]}>
+      <Tabla columnas={[...colsTabla.map((c) => c.label), ...(extra ? [extra.encabezado] : []), ""]}>
         {filtradas.map((f, i) => (
           <Tr key={f.id} i={i}>
             {colsTabla.map((c, j) => <Td key={c.key} fuerte={j === 0} style={{ opacity: f.activo === false ? 0.45 : 1 }}>{mostrar(c, f)}</Td>)}
+            {extra && <Td>{extra.render(f)}</Td>}
             <Td>
               <div style={{ display: "flex", gap: 6 }}>
                 <Btn small variante="secundario" onClick={() => abrir(f)}>Editar</Btn>
