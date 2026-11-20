@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { analizar, type RegT, type ServT } from "@/lib/tiempos";
+import { TOLERANCIA_ONTIME, analizar, type RegT, type ServT } from "@/lib/tiempos";
 import SelectBuscable from "./SelectBuscable";
 import { Btn, C, Campo, Card, inputStyle } from "./ui";
 
@@ -12,7 +12,7 @@ export function useFiltrosTiempos(servicios: ServT[], registros: RegT[], listas:
   const [proveedor, setProveedor] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
-  const [tolerancia, setTolerancia] = useState(0);
+  const [tolerancia, setTolerancia] = useState(TOLERANCIA_ONTIME);
   const [agrupar, setAgrupar] = useState<"semana" | "mes">("semana");
   const [soloConDatos, setSoloConDatos] = useState(true);
   const [meta, setMeta] = useState(inicialMeta);

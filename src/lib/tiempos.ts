@@ -38,7 +38,10 @@ export type ResultadoServicio = {
   onTime: boolean | null;
 };
 
-export function analizar(servicios: ServT[], registros: RegT[], toleranciaMin = 0): ResultadoServicio[] {
+// Minutos de gracia sobre la hora de cita antes de contar un servicio como fuera de tiempo.
+export const TOLERANCIA_ONTIME = 20;
+
+export function analizar(servicios: ServT[], registros: RegT[], toleranciaMin = TOLERANCIA_ONTIME): ResultadoServicio[] {
   const porServicio = new Map<string, Record<string, number>>();
   for (const r of registros) {
     const t = new Date(r.created_at).getTime();
