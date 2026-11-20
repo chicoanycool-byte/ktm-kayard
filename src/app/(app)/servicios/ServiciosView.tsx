@@ -10,6 +10,7 @@ import SelectBuscable from "@/components/SelectBuscable";
 import { enviarAFacturar } from "@/lib/facturacion";
 import { programaExcel, programaPDF } from "@/lib/programa";
 import EnVivo from "@/components/EnVivo";
+import { EtiquetaBloqueo } from "@/components/BloqueoCliente";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, Campo, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
@@ -43,6 +44,7 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false,
   const [recienCreado, setRecienCreado] = useState<ServicioV | null>(null);
   const [error, setError] = useState("");
   const clienteBloqueado = bloqueados.find((b) => b.id === form.cliente_id);
+  const bloqueoDe = (id: string | null | undefined) => bloqueados.find((b) => b.id === id) || null;
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -178,7 +180,12 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false,
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i} onClick={() => setDetalle(s)}>
             <Td fuerte>{s.id_track}</Td>
-            <Td><EstatusBadge estatus={s.estatus} /></Td>
+            <Td>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <EstatusBadge estatus={s.estatus} />
+                {bloqueoDe(s.cliente_id) && <EtiquetaBloqueo motivo={bloqueoDe(s.cliente_id)!.bloqueo_motivo} />}
+              </div>
+            </Td>
             <Td>{s.cliente}</Td>
             <Td>{s.tipo_unidad || "—"}</Td>
             <Td>{s.origen || "—"}</Td>
@@ -195,7 +202,7 @@ export default function ServiciosView({ servicios: ini, listas, esAdmin = false,
       <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{filtrados.length} servicios</p>
 
       {detalle && (
-        <ServicioDetalle s={detalle} esAdmin={esAdmin} onCambio={() => router.refresh()} onClose={() => setDetalle(null)} acciones={
+        <ServicioDetalle s={detalle} esAdmin={esAdmin} bloqueo={bloqueoDe(detalle.cliente_id)} onCambio={() => router.refresh()} onClose={() => setDetalle(null)} acciones={
           <>
             {(esAdmin || ["programado", "asignado"].includes(detalle.estatus)) && <Btn small href={`/asignar?id=${detalle.id}`}>{detalle.proveedor ? (esAdmin ? "Editar transporte" : "Cambiar transporte") : "Asignar transporte"}</Btn>}
             {(esAdmin || !["finalizado", "cancelado"].includes(detalle.estatus)) && <Btn small variante="secundario" onClick={() => abrir(detalle)}>Editar datos</Btn>}

@@ -22,6 +22,29 @@ export type ClienteBloqueo = {
   bloqueado?: boolean | null; bloqueo_motivo?: string | null; bloqueado_at?: string | null;
 };
 
+/** Etiqueta roja para las tablas. */
+export function EtiquetaBloqueo({ motivo }: { motivo?: string | null }) {
+  return (
+    <span title={motivo || "Cartera vencida"} style={{ padding: "0.15rem 0.5rem", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(255,92,92,0.18)", color: C.red, whiteSpace: "nowrap" }}>
+      CLIENTE BLOQUEADO
+    </span>
+  );
+}
+
+/** Franja de aviso para el detalle del servicio y la pantalla del operador. */
+export function AvisoBloqueo({ motivo, nombre }: { motivo?: string | null; nombre?: string | null }) {
+  return (
+    <div style={{ background: "rgba(255,92,92,0.12)", border: `1px solid rgba(255,92,92,0.45)`, borderRadius: 10, padding: "0.7rem 0.9rem", marginBottom: 14 }}>
+      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: C.red }}>
+        Cliente bloqueado{nombre ? `: ${nombre}` : ""}
+      </p>
+      <p style={{ margin: "3px 0 0", fontSize: 12, color: C.text, lineHeight: 1.4 }}>
+        {motivo || "Cartera vencida"}. El servicio no puede avanzar hasta que Finanzas libere la cuenta.
+      </p>
+    </div>
+  );
+}
+
 export default function BloqueoCliente({ cliente, rol, onCambio }: {
   cliente: ClienteBloqueo;
   rol: string;

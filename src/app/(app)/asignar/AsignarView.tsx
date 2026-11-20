@@ -6,6 +6,8 @@ import { fecha, hora } from "@/lib/format";
 import { linkWhatsApp, msgOperador, msgProveedor } from "@/lib/whatsapp";
 import SelectBuscable from "@/components/SelectBuscable";
 import { linkOperador, type ServicioV } from "@/components/ServicioDetalle";
+import { AvisoBloqueo, EtiquetaBloqueo } from "@/components/BloqueoCliente";
+import type { ClienteBloqueado } from "@/lib/bloqueos";
 import { Btn, C, Campo, Card, Dato, EstatusBadge, Grid, Modal, Seccion, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
 type Proveedor = { id: string; nombre: string; contacto_nombre?: string; contacto_telefono?: string };
@@ -13,12 +15,15 @@ type Operador = { id: string; nombre: string; telefono?: string; folio_licencia?
 
 const VACIO = { proveedor_id: "", operador_id: "", placas_unidad: "", economico_unidad: "", placas_caja: "", economico_caja: "", folio_licencia: "" };
 
-export default function AsignarView({ servicios: ini, proveedores, operadores, seleccionadoId }: {
+export default function AsignarView({ servicios: ini, proveedores, operadores, seleccionadoId, bloqueados = [] }: {
   servicios: ServicioV[]; proveedores: Proveedor[]; operadores: Operador[]; seleccionadoId?: string;
+  bloqueados?: ClienteBloqueado[];
 }) {
+  const bloqueoDe = (id: string | null | undefined) => bloqueados.find((b) => b.id === id) || null;
   const [servicios, setServicios] = useState(ini);
   const inicial = ini.find((s) => s.id === seleccionadoId) || null;
   const [sel, setSel] = useState<ServicioV | null>(inicial);
+  const bloqueoSel = bloqueoDe(sel?.cliente_id);
   const [form, setForm] = useState(inicial ? cargar(inicial) : VACIO);
   const [listo, setListo] = useState<ServicioV | null>(null);
   const [error, setError] = useState("");
@@ -48,6 +53,7 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     if (!sel) return;
+    if (bloqueoSel) { setError(`${bloqueoSel.nombre} está bloqueado (${bloqueoSel.bloqueo_motivo || "cartera vencida"}). Finanzas tiene que liberar la cuenta antes de asignar transporte.`); return; }
     setLoading(true);
     setError("");
     const datos: Record<string, unknown> = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === "" ? null : v]));
@@ -80,7 +86,12 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
             {servicios.map((s, i) => (
               <Tr key={s.id} i={i} onClick={() => elegir(s)}>
                 <Td fuerte style={{ color: sel?.id === s.id ? C.amber : undefined }}>{s.id_track}</Td>
-                <Td><EstatusBadge estatus={s.estatus} /></Td>
+                <Td>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <EstatusBadge estatus={s.estatus} />
+                    {bloqueoDe(s.cliente_id) && <EtiquetaBloqueo motivo={bloqueoDe(s.cliente_id)!.bloqueo_motivo} />}
+                  </div>
+                </Td>
                 <Td>{s.cliente}</Td>
                 <Td>{s.origen} → {s.destino}</Td>
                 <Td>{fecha(s.fecha_carga)}</Td>
@@ -92,6 +103,7 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
         {sel ? (
           <Card>
             <h3 style={{ color: "white", marginTop: 0 }}>{sel.id_track} <span style={{ fontSize: 13, color: C.muted, fontWeight: 400 }}>· {sel.cliente}</span></h3>
+            {bloqueoSel && <AvisoBloqueo nombre={bloqueoSel.nombre} motivo={bloqueoSel.bloqueo_motivo} />}
             <Grid cols={3}>
               <Dato label="Unidad" valor={sel.tipo_unidad} />
               <Dato label="Carga" valor={sel.tipo_carga} />
@@ -119,7 +131,7 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
               {opsProveedor.length === 0 && form.proveedor_id && <p style={{ color: C.muted, fontSize: 12 }}>Este transportista no tiene operadores. Agrégalos en <a href="/operadores" target="_blank" style={{ color: C.blue }}>Operadores</a>.</p>}
               {error && <p style={{ color: C.red, fontSize: 13 }}>{error}</p>}
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <Btn type="submit" disabled={loading} style={{ flex: 1 }}>{loading ? "Guardando…" : "Asignar transporte"}</Btn>
+                <Btn type="submit" disabled={loading || !!bloqueoSel} style={{ flex: 1 }}>{loading ? "Guardando…" : "Asignar transporte"}</Btn>
                 <Btn variante="secundario" onClick={() => setSel(null)}>Cerrar</Btn>
               </div>
             </form>

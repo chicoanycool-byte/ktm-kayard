@@ -5,11 +5,16 @@ import { createClient } from "@/lib/supabase/client";
 import { ESTATUS, ESTATUS_INFO, type Estatus } from "@/lib/constants";
 import { fecha, fechaHora, hora } from "@/lib/format";
 import EnVivo from "@/components/EnVivo";
+import { EtiquetaBloqueo } from "@/components/BloqueoCliente";
 import LineaEstatus from "@/components/LineaEstatus";
+import type { ClienteBloqueado } from "@/lib/bloqueos";
 import ServicioDetalle, { type ServicioV } from "@/components/ServicioDetalle";
 import { Btn, Buscador, C, EstatusBadge, Tabla, Td, Titulo, Tr, inputStyle } from "@/components/ui";
 
-export default function MonitoreoView({ servicios: ini, esAdmin = false }: { servicios: ServicioV[]; esAdmin?: boolean }) {
+export default function MonitoreoView({ servicios: ini, esAdmin = false, bloqueados = [] }: {
+  servicios: ServicioV[]; esAdmin?: boolean; bloqueados?: ClienteBloqueado[];
+}) {
+  const bloqueoDe = (id: string | null | undefined) => bloqueados.find((b) => b.id === id) || null;
   const [servicios, setServicios] = useState(ini);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState("activos");
@@ -70,7 +75,13 @@ export default function MonitoreoView({ servicios: ini, esAdmin = false }: { ser
       <Tabla columnas={["Estatus", "ID TRACK", "Cliente", "Origen", "Unidad", "Carga", "Fecha carga", "Fecha descarga", "Transporte / operador", "Ubicación", "Actualizado", "Cambiar estatus"]}>
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i}>
-            <Td><EstatusBadge estatus={s.estatus} /><LineaEstatus estatus={s.estatus} compacta /></Td>
+            <Td>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <EstatusBadge estatus={s.estatus} />
+                {bloqueoDe(s.cliente_id) && <EtiquetaBloqueo motivo={bloqueoDe(s.cliente_id)!.bloqueo_motivo} />}
+              </div>
+              <LineaEstatus estatus={s.estatus} compacta />
+            </Td>
             <Td fuerte><span onClick={() => setDetalle(s)} style={{ cursor: "pointer", textDecoration: "underline" }}>{s.id_track}</span></Td>
             <Td>{s.cliente}</Td>
             <Td>{s.origen} → {s.destino}</Td>
@@ -92,7 +103,7 @@ export default function MonitoreoView({ servicios: ini, esAdmin = false }: { ser
       </Tabla>
       <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{filtrados.length} servicios · se actualiza en vivo (y cada 30 s)</p>
 
-      {detalle && <ServicioDetalle s={detalle} esAdmin={esAdmin} onCambio={() => router.refresh()} onClose={() => setDetalle(null)} acciones={esAdmin ? <Btn small href={`/asignar?id=${detalle.id}`}>Editar transporte</Btn> : undefined} />}
+      {detalle && <ServicioDetalle s={detalle} esAdmin={esAdmin} bloqueo={bloqueoDe(detalle.cliente_id)} onCambio={() => router.refresh()} onClose={() => setDetalle(null)} acciones={esAdmin ? <Btn small href={`/asignar?id=${detalle.id}`}>Editar transporte</Btn> : undefined} />}
     </div>
   );
 }

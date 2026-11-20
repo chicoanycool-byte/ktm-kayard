@@ -95,17 +95,28 @@ export default function OperadorView({ token }: { token: string }) {
       <h1 style={{ color: "white", fontSize: 20, margin: "0 0 4px" }}>Tu servicio asignado</h1>
       <p style={{ color: C.amber, fontSize: 24, fontWeight: 800, margin: "0 0 12px" }}>{info.id_track}</p>
 
+      {info.cliente_bloqueado && (
+        <div style={{ ...caja, background: "rgba(255,92,92,0.12)", border: "1px solid rgba(255,92,92,0.5)" }}>
+          <p style={{ color: C.red, fontWeight: 800, margin: "0 0 4px", fontSize: 16 }}>Servicio detenido</p>
+          <p style={{ color: C.text, fontSize: 14, margin: 0, lineHeight: 1.45 }}>
+            La cuenta de {info.cliente} está bloqueada ({info.cliente_bloqueo_motivo || "cartera vencida"}).
+            No cargues ni salgas a ruta. Comunícate con tu contacto en Kayard antes de hacer cualquier movimiento.
+          </p>
+        </div>
+      )}
+
       {!cerrado && (
         <div style={caja}>
           <p style={{ color: "white", fontWeight: 700, marginTop: 0 }}>Actualiza tu estatus</p>
           <div style={{ display: "grid", gap: 8 }}>
             {PASOS.map((p) => {
               const hecho = ORDEN.indexOf(p.estatus) <= idx;
-              return (
-                <button key={p.estatus} disabled={ocupado || hecho || info.estatus === "programado" || (p.estatus === "finalizado" && fotosDocs.length === 0)} onClick={() => avanzar(p.estatus)}
+                const frenado = !!info.cliente_bloqueado && ["llegada_carga", "en_transito"].includes(p.estatus);
+                return (
+                <button key={p.estatus} disabled={ocupado || hecho || frenado || info.estatus === "programado" || (p.estatus === "finalizado" && fotosDocs.length === 0)} onClick={() => avanzar(p.estatus)}
                   style={{ padding: "0.9rem", borderRadius: 10, border: "none", fontSize: 16, fontWeight: 700, cursor: "pointer",
-                    background: hecho ? "rgba(255,255,255,.08)" : p.color, color: hecho ? C.muted : "#000000", opacity: ocupado ? 0.6 : 1 }}>
-                  {hecho ? "✔ " : ""}{p.label}
+                    background: hecho || frenado ? "rgba(255,255,255,.08)" : p.color, color: hecho || frenado ? C.muted : "#000000", opacity: ocupado ? 0.6 : 1 }}>
+                  {hecho ? "✔ " : ""}{frenado ? "🔒 " : ""}{p.label}
                 </button>
               );
             })}

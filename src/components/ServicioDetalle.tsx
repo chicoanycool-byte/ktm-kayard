@@ -8,6 +8,7 @@ import { linkWhatsApp, msgCliente, msgOperador, msgProveedor } from "@/lib/whats
 import { descargarFoto, descargarTodas, nombresFotos } from "@/lib/fotos";
 import { bitacoraExcel, bitacoraPDF } from "@/lib/bitacora";
 import BitacoraEditor from "./BitacoraEditor";
+import { AvisoBloqueo } from "./BloqueoCliente";
 import LineaEstatus from "./LineaEstatus";
 import { Btn, C, Dato, EstatusBadge, Modal, Seccion, inputStyle } from "./ui";
 
@@ -22,8 +23,9 @@ export function urlEvidencia(path: string) {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/evidencias/${path}`;
 }
 
-export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false, onCambio }: {
+export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false, onCambio, bloqueo }: {
   s: ServicioV; onClose: () => void; acciones?: React.ReactNode; esAdmin?: boolean; onCambio?: () => void;
+  bloqueo?: { nombre: string; bloqueo_motivo: string | null } | null;
 }) {
   const [bitacora, setBitacora] = useState<any[]>([]);
   const [evidencias, setEvidencias] = useState<any[]>([]);
@@ -39,8 +41,14 @@ export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false,
 
   const recargar = () => { setVersion((v) => v + 1); onCambio?.(); };
 
+  // Mientras la carga no haya salido, un cliente bloqueado no deja avanzar el servicio
+  const FRENADOS = ["asignado", "llegada_carga", "en_transito"];
   async function cambiarEstatus(estatus: string) {
     if (estatus === s.estatus) return;
+    if (bloqueo && FRENADOS.includes(estatus)) {
+      alert(`${bloqueo.nombre} está bloqueado (${bloqueo.bloqueo_motivo || "cartera vencida"}). Finanzas tiene que liberar la cuenta antes de que el servicio avance.`);
+      return;
+    }
     if (!confirm(`¿Cambiar el estatus de ${s.id_track} a "${ESTATUS_INFO[estatus as Estatus]?.label}"?`)) return;
     const { error } = await createClient().from("servicios").update({ estatus }).eq("id", s.id);
     if (error) return alert(error.message);
@@ -74,6 +82,7 @@ export default function ServicioDetalle({ s, onClose, acciones, esAdmin = false,
         )}
       </div>
 
+      {bloqueo && <AvisoBloqueo nombre={bloqueo.nombre} motivo={bloqueo.bloqueo_motivo} />}
       <div style={{ marginBottom: 16 }}><LineaEstatus estatus={s.estatus} bitacora={bitacora} /></div>
 
       <div style={g}>
