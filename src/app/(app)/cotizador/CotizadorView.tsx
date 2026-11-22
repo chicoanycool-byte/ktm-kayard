@@ -248,6 +248,22 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
 
   return (
     <div>
+      {/* En celular el cotizador se apila: una columna, campos completos y nada que se salga */}
+      <style>{`
+        @media (max-width: 860px) {
+          .cot-cols { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 760px) {
+          .cot-precio { margin-left: 0 !important; width: 100%; }
+          .cot-precio input { flex: 1; width: auto !important; }
+          .cot-nodos { flex-direction: column; align-items: stretch !important; }
+          .cot-nodos select { min-width: 0 !important; width: 100%; }
+          .cot-nodos > div { width: 100%; }
+          .cot-renglon { flex-direction: column; align-items: flex-start !important; gap: 2px !important; }
+          .cot-renglon > span:last-child { align-self: flex-end; }
+          .cot-acciones > * { flex: 1 1 100%; }
+        }
+      `}</style>
       <Titulo accion={esAdmin ? <Btn variante="secundario" href="/cotizador/configuracion">⚙️ Parámetros</Btn> : undefined}>Cotizador de transporte</Titulo>
 
       {/* Precio del combustible del día */}
@@ -261,7 +277,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
               <span style={{ color: C.muted }}>{combustible.fuente} · {fecha(combustible.fecha)}</span>
             </>
           ) : <span style={{ color: C.red }}>No se pudo consultar ({errorComb}). Se usa el valor guardado: ${precioAuto.toFixed(2)}</span>}
-          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+          <span className="cot-precio" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ color: C.muted }}>Precio usado ({u.combustible})</span>
             <input value={precioManual} onChange={(e) => setPrecioManual(e.target.value)} placeholder={precioAuto.toFixed(2)}
               style={{ ...inputStyle, width: 90, padding: "0.3rem 0.5rem", textAlign: "right" }} />
@@ -270,7 +286,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(320px, 1fr)", gap: "1rem", alignItems: "start" }}>
+      <div className="cot-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(320px, 1fr)", gap: "1rem", alignItems: "start" }}>
         {/* ── Datos */}
         <Card>
           <p style={{ margin: "0 0 0.85rem", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>DATOS DE LA COTIZACIÓN</p>
@@ -383,7 +399,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             </div>
             {avisoKm && <p style={{ fontSize: 12, color: C.blue, margin: "8px 0 0" }}>{avisoKm}</p>}
             {nodos.origen.length > 0 && (
-              <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div className="cot-nodos" style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
                 <Campo label="Punto de la red federal (origen)">
                   <select value={nodoO} onChange={(e) => { setNodoO(e.target.value); buscarRuta(e.target.value, nodoD); }} style={{ ...inputStyle, minWidth: 200 }}>
                     <option value="">—</option>
@@ -466,7 +482,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
                 DESTINOS DE ESTA COTIZACIÓN ({lineas.length})
               </p>
               {lineas.map((l, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "0.35rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <div key={i} className="cot-renglon" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "0.35rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   <span style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis" }}>
                     <b style={{ color: "white" }}>{l.punto || l.destino}</b>
                     <span style={{ color: C.muted }}> · {l.destino}{l.fija ? " · tarifa fija" : ` · ${l.km} km`}</span>
@@ -532,7 +548,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
             <div style={{ marginTop: 14 }}>
               <p style={{ margin: "0 0 6px", color: C.amber, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>DESTINOS ({detalle.destinos!.length})</p>
               {detalle.destinos!.map((l, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 13 }}>
+                <div key={i} className="cot-renglon" style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 13 }}>
                   <span>{l.punto || "—"} <span style={{ color: C.muted }}>· {l.destino}{l.fija ? " · tarifa fija" : ` · ${l.km} km · casetas ${money(l.casetas)}`}</span></span>
                   <b style={{ color: C.amber, whiteSpace: "nowrap" }}>{money(l.tarifa_cliente)}</b>
                 </div>
@@ -541,7 +557,7 @@ export default function CotizadorView({ config, poblaciones, clientes, cotizacio
           )}
           {detalle.notas && <p style={{ color: C.muted, fontSize: 13, marginTop: 12 }}>Notas: {detalle.notas}</p>}
           <p style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>Precio de combustible: {detalle.combustible_fuente}</p>
-          <div style={{ display: "flex", gap: 8, marginTop: "1.2rem", flexWrap: "wrap" }}>
+          <div className="cot-acciones" style={{ display: "flex", gap: 8, marginTop: "1.2rem", flexWrap: "wrap" }}>
             <Btn onClick={() => carta(detalle)}>📄 Descargar carta en Word</Btn>
             {detalle.estatus !== "aceptada" && <Btn variante="verde" onClick={() => cambiarEstatus(detalle, "aceptada")}>Marcar aceptada</Btn>}
             {detalle.estatus !== "rechazada" && <Btn variante="peligro" onClick={() => cambiarEstatus(detalle, "rechazada")}>Marcar rechazada</Btn>}
