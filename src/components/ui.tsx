@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ESTATUS_INFO, type Estatus } from "@/lib/constants";
 
 // Paleta KTM (navy / ámbar)
@@ -102,11 +102,20 @@ export function Grid({ children, cols = 2 }: { children: ReactNode; cols?: numbe
 
 export function Modal({ titulo, children, onClose, ancho = 560 }: { titulo: string; children: ReactNode; onClose: () => void; ancho?: number }) {
   return (
-    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 50, overflowY: "auto", padding: "2rem 1rem" }}>
-      <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: ancho, border: `1px solid ${C.line}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+    <div className="ktm-modal-fondo" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 50, overflowY: "auto", padding: "2rem 1rem" }}>
+      {/* En celular la ventana ocupa toda la pantalla y el título se queda fijo arriba */}
+      <style>{`
+        @media (max-width: 760px) {
+          .ktm-modal-fondo { padding: 0 !important; }
+          .ktm-modal { border-radius: 0 !important; min-height: 100vh; padding: 0 1rem 2rem !important; max-width: 100% !important; border: none !important; }
+          .ktm-modal-cabeza { position: sticky; top: 0; z-index: 2; background: ${C.card}; padding: 1rem 0 0.9rem !important; margin-bottom: 0.9rem !important; }
+          .ktm-modal-cabeza h3 { font-size: 16px !important; }
+        }
+      `}</style>
+      <div className="ktm-modal" style={{ backgroundColor: C.card, borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: ancho, border: `1px solid ${C.line}` }}>
+        <div className="ktm-modal-cabeza" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
           <h3 style={{ color: "white", fontSize: 18, fontWeight: 700, margin: 0 }}>{titulo}</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>×</button>
+          <button onClick={onClose} aria-label="Cerrar" style={{ background: "none", border: "none", color: C.muted, fontSize: 26, cursor: "pointer", lineHeight: 1, padding: "4px 10px", marginRight: -10 }}>×</button>
         </div>
         {children}
       </div>
@@ -156,6 +165,7 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
   const hayFilas = hijos.length > 0;
   const tbody = useRef<HTMLTableSectionElement>(null);
   const [filtros, setFiltros] = useState<Record<number, FiltroCol>>({});
+  const idTabla = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [abierto, setAbierto] = useState<{ col: number; x: number; y: number } | null>(null);
   const [pagina, setPagina] = useState(0);
   const [conteo, setConteo] = useState<{ vis: number; total: number }>({ vis: 0, total: 0 });
@@ -237,7 +247,22 @@ export function Tabla({ columnas, children, vacio = "Sin registros", colSpan, on
           <button onClick={() => setFiltros({})} style={{ background: "none", border: `1px solid ${C.line}`, color: C.amber, borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12 }}>Quitar filtros de la tabla</button>
         </div>
       )}
-      <div style={{ backgroundColor: C.card, borderRadius: 12, overflowX: "auto" }}>
+      {/* En celular la tabla deja de ser tabla: cada renglón se vuelve una tarjeta con sus
+          etiquetas, porque doce columnas no caben en una pantalla de teléfono. */}
+      <style>{`
+        @media (max-width: 760px) {
+          .tbl-${idTabla} { background: transparent !important; border-radius: 0 !important; }
+          .tbl-${idTabla} table { font-size: 14px; }
+          .tbl-${idTabla} thead { display: none; }
+          .tbl-${idTabla} tbody tr { display: block; background: ${C.card}; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 10px; padding: 2px 0; }
+          .tbl-${idTabla} tbody td { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; text-align: right; padding: 8px 14px !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; white-space: normal !important; }
+          .tbl-${idTabla} tbody td:last-child { border-bottom: none !important; }
+          .tbl-${idTabla} tbody td::before { content: attr(data-col); color: ${C.muted}; font-size: 11px; letter-spacing: .4px; text-transform: uppercase; text-align: left; flex: 0 0 38%; padding-top: 2px; }
+          .tbl-${idTabla} tbody td:empty { display: none; }
+          ${columnas.map((c, i) => `.tbl-${idTabla} tbody td:nth-child(${i + 1})::before{content:${JSON.stringify(c || " ")}}`).join("\n          ")}
+        }
+      `}</style>
+      <div className={`tbl-${idTabla}`} style={{ backgroundColor: C.card, borderRadius: 12, overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ backgroundColor: C.head, borderBottom: "2px solid rgba(245,166,35,0.35)" }}>

@@ -80,38 +80,52 @@ export default function LineaEstatus({ estatus, bitacora, compacta = false }: {
 
   return (
     <div style={{ background: C.card2, border: `1px solid ${C.line}`, borderRadius: 12, padding: "18px 14px 14px", overflowX: "auto" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", minWidth: 620 }}>
+      {/* En celular la línea se acuesta: siete pasos en fila no caben en un teléfono */}
+      <style>{`
+        @media (max-width: 760px) {
+          .le-linea { flex-direction: column !important; min-width: 0 !important; }
+          .le-paso { flex-direction: row !important; align-items: center !important; gap: 14px; padding: 2px 0; }
+          .le-punto { display: none !important; }
+          .le-tramo { right: auto !important; left: 22px !important; top: 0 !important; width: 3px !important; height: 100% !important; }
+          .le-icono { margin-top: 0 !important; z-index: 1; background: ${C.card2}; }
+          .le-texto { text-align: left !important; }
+          .le-texto p { text-align: left !important; margin-left: 0 !important; margin-right: 0 !important; }
+        }
+      `}</style>
+      <div className="le-linea" style={{ display: "flex", alignItems: "flex-start", minWidth: 620 }}>
         {PASOS.map((p, i) => {
           const hecho = i <= actual;
           const esActual = i === actual && !cancelado;
           const color = hecho ? hechoColor : "rgba(255,255,255,0.28)";
           return (
-            <div key={p} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+            <div key={p} className="le-paso" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
               {/* tramo de línea hacia el paso anterior */}
               {i > 0 && (
-                <span style={{ position: "absolute", right: "50%", top: 7, width: "100%", height: 3, borderRadius: 2, background: hecho ? hechoColor : "rgba(255,255,255,0.14)" }} />
+                <span className="le-tramo" style={{ position: "absolute", right: "50%", top: 7, width: "100%", height: 3, borderRadius: 2, background: hecho ? hechoColor : "rgba(255,255,255,0.14)" }} />
               )}
-              <span style={{
+              <span className="le-punto" style={{
                 position: "relative", width: 16, height: 16, borderRadius: "50%", background: hecho ? hechoColor : C.card,
                 border: `2px solid ${hecho ? hechoColor : "rgba(255,255,255,0.28)"}`,
-                boxShadow: esActual ? "0 0 0 5px rgba(47,217,123,0.22)" : undefined,
+                boxShadow: esActual ? `0 0 0 5px rgba(47,217,123,0.22)` : undefined,
               }} />
-              <span style={{ marginTop: 10, color, display: "flex", alignItems: "center", justifyContent: "center", width: 46, height: 46, borderRadius: "50%", border: `2px solid ${color}` }}>
+              <span className="le-icono" style={{ marginTop: 10, color, display: "flex", alignItems: "center", justifyContent: "center", width: 46, height: 46, flexShrink: 0, borderRadius: "50%", border: `2px solid ${color}`, boxShadow: esActual ? `0 0 0 4px rgba(47,217,123,0.18)` : undefined }}>
                 <Icono estatus={p} tam={26} />
               </span>
-              <p style={{ margin: "8px 4px 0", fontSize: 11, fontWeight: 700, color: hecho ? C.text : C.muted, textAlign: "center", lineHeight: 1.25 }}>
-                {ESTATUS_INFO[p].label}
-              </p>
-              <p style={{ margin: "3px 0 0", fontSize: 10, color: C.muted, textAlign: "center", minHeight: 13 }}>
-                {cuando[p] ? fechaHora(cuando[p]) : ""}
-              </p>
+              <span className="le-texto" style={{ display: "block" }}>
+                <p style={{ margin: "8px 4px 0", fontSize: 11, fontWeight: 700, color: hecho ? C.text : C.muted, textAlign: "center", lineHeight: 1.25 }}>
+                  {ESTATUS_INFO[p].label}
+                </p>
+                <p style={{ margin: "3px 0 0", fontSize: 10, color: C.muted, textAlign: "center", minHeight: 13 }}>
+                  {cuando[p] ? fechaHora(cuando[p]) : ""}
+                </p>
+              </span>
             </div>
           );
         })}
       </div>
       {cancelado && (
         <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: 12, fontWeight: 700, color: C.red }}>
-          SERVICIO CANCELADO{cuando.programado ? "" : ""}
+          SERVICIO CANCELADO
         </p>
       )}
     </div>

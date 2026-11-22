@@ -35,3 +35,13 @@
     font-family: system-ui, sans-serif;
   }
 }
+/* Celular */
+@media (max-width: 760px) {
+  /* Safari de iPhone hace zoom al enfocar un campo de menos de 16 px */
+  input, select, textarea { font-size: 16px !important; }
+  /* Nada se sale de la pantalla a lo ancho */
+  body { overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+  /* Títulos y botones a una medida que se alcance con el pulgar */
+  .ktm-main h2 { font-size: 18px !important; }
+  .ktm-main button, .ktm-main a[role="button"] { min-height: 38px; }
+}
