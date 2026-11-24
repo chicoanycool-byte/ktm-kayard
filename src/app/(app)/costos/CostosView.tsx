@@ -208,7 +208,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
       Utilidad: Number(s.utilidad || 0),
       "Margen %": Number(s.margen_pct || 0),
       Facturación: FACT[s.estatus_facturacion || "por_facturar"]?.label || "",
-      "Factura Kayard": s.factura_kayard || "",
+      "Factura cliente": s.factura_kayard || "",
       "Factura proveedor": s.factura_proveedor || "",
       "Pago proveedor": s.estatus_pago === "pagado" ? "Pagado" : "Pendiente",
       "Enviado a facturar": s.enviado_facturar_at ? fecha(s.enviado_facturar_at) : "",
@@ -319,8 +319,14 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <div style={{ marginTop: 12 }}>
               <Grid>
                 <Seccion titulo="Facturación" />
-                <Campo label="Factura Kayard (al cliente)"><input value={form.factura_kayard} onChange={(e) => setForm({ ...form, factura_kayard: e.target.value })} style={inputStyle} /></Campo>
-                <Campo label="Factura del proveedor"><input value={form.factura_proveedor} onChange={(e) => setForm({ ...form, factura_proveedor: e.target.value })} style={inputStyle} /></Campo>
+                <Campo label="Factura(s) de cliente">
+                  <input value={form.factura_kayard} onChange={(e) => setForm({ ...form, factura_kayard: e.target.value })} placeholder="A-1234" style={inputStyle} />
+                  <span style={{ fontSize: 11, color: C.muted }}>Si son varias, sepáralas con coma.</span>
+                </Campo>
+                <Campo label="Factura(s) del proveedor">
+                  <input value={form.factura_proveedor} onChange={(e) => setForm({ ...form, factura_proveedor: e.target.value })} placeholder="F-5678" style={inputStyle} />
+                  <span style={{ fontSize: 11, color: C.muted }}>Si son varias, sepáralas con coma.</span>
+                </Campo>
                 <Campo label="Estatus facturación">
                   <select value={form.estatus_facturacion} onChange={(e) => setForm({ ...form, estatus_facturacion: e.target.value })} style={inputStyle}>
                     {Object.entries(FACT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}

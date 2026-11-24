@@ -25,6 +25,7 @@ export type ServicioWA = {
   operador?: string | null;
   operador_telefono?: string | null;
   placas_unidad?: string | null;
+  factura_kayard?: string | null;
   factura_proveedor?: string | null;
   venta_flete?: number | null;
   venta_seguro?: number | null;
@@ -127,7 +128,8 @@ export function msgFacturar(s: ServicioWA, nombre: string) {
     `*Cliente*: ${s.cliente || "—"}.`,
     `*Transporte*: ${s.proveedor || "—"}.`,
     `*Fecha Carga*: ${fecha(s.fecha_carga)}.`,
-    `*Factura de cliente*: ${s.factura_proveedor || "—"}.`,
+    `*Factura de cliente*: ${s.factura_kayard || "—"}.`,
+    `*Factura de proveedor*: ${s.factura_proveedor || "—"}.`,
     `*Origen*: ${s.origen || "—"}.`,
     `*Destino*: ${s.destino || "—"}.`,
     `*Transporte*: ${money(s.venta_flete)}.`,
