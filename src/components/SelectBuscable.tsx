@@ -7,7 +7,7 @@ export type OpcionBuscable = { id: string; nombre: string };
 const normalizar = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 // Campo donde se escribe y se sugieren coincidencias (sin acentos, por cualquier parte del texto)
-export default function SelectBuscable({ opciones, value, onChange, requerido, placeholder = "Escribe para buscar…", name, maxSugerencias = 60 }: {
+export default function SelectBuscable({ opciones, value, onChange, requerido, placeholder = "Escribe para buscar…", name, maxSugerencias = 60, onAgregar, textoAgregar = "Agregar" }: {
   opciones: OpcionBuscable[];
   value: string;
   onChange: (id: string) => void;
@@ -15,6 +15,9 @@ export default function SelectBuscable({ opciones, value, onChange, requerido, p
   placeholder?: string;
   name?: string;
   maxSugerencias?: number;
+  // Si se pasa, el desplegable ofrece dar de alta lo que se escribió sin salir de la pantalla
+  onAgregar?: (texto: string) => void;
+  textoAgregar?: string;
 }) {
   const seleccionada = opciones.find((o) => o.id === value);
   const [texto, setTexto] = useState(seleccionada?.nombre || "");
@@ -113,7 +116,7 @@ export default function SelectBuscable({ opciones, value, onChange, requerido, p
       {abierto && (
         <div ref={lista} style={{ position: "absolute", zIndex: 60, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: 240, overflowY: "auto",
           background: C.side, border: `1px solid ${C.line}`, borderRadius: 8, boxShadow: "0 10px 25px rgba(0,0,0,.4)" }}>
-          {filtradas.length === 0 ? (
+          {filtradas.length === 0 && !onAgregar ? (
             <div style={{ padding: "0.55rem 0.75rem", color: C.muted, fontSize: 13 }}>Sin coincidencias</div>
           ) : filtradas.map((o, i) => (
             <div key={o.id} onMouseDown={(e) => { e.preventDefault(); elegir(o); }} onMouseEnter={() => setActivo(i)}
@@ -122,6 +125,14 @@ export default function SelectBuscable({ opciones, value, onChange, requerido, p
               {o.nombre}
             </div>
           ))}
+          {onAgregar && (
+            <div onMouseDown={(e) => { e.preventDefault(); setAbierto(false); onAgregar(texto.trim()); }}
+              style={{ padding: "0.55rem 0.75rem", fontSize: 13, cursor: "pointer", color: C.amber, fontWeight: 700,
+                borderTop: filtradas.length ? `1px solid ${C.line}` : undefined, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 15, lineHeight: 1 }}>＋</span>
+              {texto.trim() ? `${textoAgregar}: “${texto.trim()}”` : textoAgregar}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -21,6 +21,12 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
 }) {
   const bloqueoDe = (id: string | null | undefined) => bloqueados.find((b) => b.id === id) || null;
   const [servicios, setServicios] = useState(ini);
+  const [provs, setProvs] = useState(proveedores);
+  const [opers, setOpers] = useState(operadores);
+  // Alta rápida desde el propio buscador: "proveedor" u "operador", con lo que se alcanzó a escribir
+  const [alta, setAlta] = useState<{ tipo: "proveedor" | "operador"; nombre: string; telefono: string; contacto: string; folio: string } | null>(null);
+  const [guardandoAlta, setGuardandoAlta] = useState(false);
+  const [errorAlta, setErrorAlta] = useState("");
   const inicial = ini.find((s) => s.id === seleccionadoId) || null;
   const [sel, setSel] = useState<ServicioV | null>(inicial);
   const bloqueoSel = bloqueoDe(sel?.cliente_id);
@@ -41,10 +47,43 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
     setError("");
   }
 
-  const opsProveedor = useMemo(() => operadores.filter((o) => !form.proveedor_id || o.proveedor_id === form.proveedor_id), [operadores, form.proveedor_id]);
+  const opsProveedor = useMemo(() => opers.filter((o) => !form.proveedor_id || o.proveedor_id === form.proveedor_id), [opers, form.proveedor_id]);
+
+  const abrirAlta = (tipo: "proveedor" | "operador", nombre: string) => {
+    setErrorAlta("");
+    setAlta({ tipo, nombre, telefono: "", contacto: "", folio: "" });
+  };
+
+  // Da de alta la línea o el operador y lo deja seleccionado en el formulario
+  async function guardarAlta(e: React.FormEvent) {
+    e.preventDefault();
+    if (!alta || !alta.nombre.trim()) return;
+    setGuardandoAlta(true);
+    setErrorAlta("");
+    if (alta.tipo === "proveedor") {
+      const { data, error } = await supabase.from("proveedores")
+        .insert({ nombre: alta.nombre.trim(), contacto_nombre: alta.contacto.trim() || null, contacto_telefono: alta.telefono.trim() || null, activo: true })
+        .select("id, nombre").single();
+      setGuardandoAlta(false);
+      if (error || !data) { setErrorAlta(error?.message || "No se pudo guardar"); return; }
+      setProvs((p) => [...p, data].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")));
+      setForm((f) => ({ ...f, proveedor_id: data.id, operador_id: "" }));
+    } else {
+      if (!form.proveedor_id) { setGuardandoAlta(false); setErrorAlta("Primero elige la línea de transporte."); return; }
+      const { data, error } = await supabase.from("operadores")
+        .insert({ nombre: alta.nombre.trim(), telefono: alta.telefono.trim() || null, folio_licencia: alta.folio.trim() || null, proveedor_id: form.proveedor_id, activo: true })
+        .select("id, nombre, telefono, folio_licencia, proveedor_id").single();
+      setGuardandoAlta(false);
+      if (error || !data) { setErrorAlta(error?.message || "No se pudo guardar"); return; }
+      setOpers((o) => [...o, data].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")));
+      setForm((f) => ({ ...f, operador_id: data.id, folio_licencia: data.folio_licencia || f.folio_licencia }));
+    }
+    setAlta(null);
+    router.refresh();
+  }
 
   function elegirOperador(id: string) {
-    const o = operadores.find((x) => x.id === id);
+    const o = opers.find((x) => x.id === id);
     setForm({ ...form, operador_id: id, folio_licencia: o?.folio_licencia || form.folio_licencia, proveedor_id: o?.proveedor_id || form.proveedor_id });
   }
 
@@ -117,10 +156,13 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
               <Grid>
                 <Seccion titulo="Datos del transporte" />
                 <Campo label="Línea de transporte *">
-                  <SelectBuscable requerido value={form.proveedor_id} opciones={proveedores} onChange={(id) => setForm((f) => ({ ...f, proveedor_id: id, operador_id: "" }))} />
+                  <SelectBuscable requerido value={form.proveedor_id} opciones={provs} textoAgregar="Dar de alta línea de transporte"
+                    onAgregar={(t) => abrirAlta("proveedor", t)}
+                    onChange={(id) => setForm((f) => ({ ...f, proveedor_id: id, operador_id: "" }))} />
                 </Campo>
                 <Campo label="Operador *">
-                  <SelectBuscable requerido value={form.operador_id} opciones={opsProveedor} onChange={elegirOperador} />
+                  <SelectBuscable requerido value={form.operador_id} opciones={opsProveedor} textoAgregar="Dar de alta operador"
+                    onAgregar={(t) => abrirAlta("operador", t)} onChange={elegirOperador} />
                 </Campo>
                 <Campo label="Placas unidad *"><input required value={form.placas_unidad} onChange={set("placas_unidad")} style={inputStyle} /></Campo>
                 <Campo label="Económico unidad"><input value={form.economico_unidad} onChange={set("economico_unidad")} style={inputStyle} /></Campo>
@@ -128,7 +170,7 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
                 <Campo label="Económico caja"><input value={form.economico_caja} onChange={set("economico_caja")} style={inputStyle} /></Campo>
                 <Campo label="Folio licencia"><input value={form.folio_licencia} onChange={set("folio_licencia")} style={inputStyle} /></Campo>
               </Grid>
-              {opsProveedor.length === 0 && form.proveedor_id && <p style={{ color: C.muted, fontSize: 12 }}>Este transportista no tiene operadores. Agrégalos en <a href="/operadores" target="_blank" style={{ color: C.blue }}>Operadores</a>.</p>}
+              {opsProveedor.length === 0 && form.proveedor_id && <p style={{ color: C.muted, fontSize: 12 }}>Esta línea no tiene operadores dados de alta. Escribe el nombre en el campo de operador y elige “Dar de alta operador”.</p>}
               {error && <p style={{ color: C.red, fontSize: 13 }}>{error}</p>}
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                 <Btn type="submit" disabled={loading || !!bloqueoSel} style={{ flex: 1 }}>{loading ? "Guardando…" : "Asignar transporte"}</Btn>
@@ -149,6 +191,39 @@ export default function AsignarView({ servicios: ini, proveedores, operadores, s
             <Btn variante="verde" href={linkWhatsApp(listo.operador_telefono, msgOperador(listo, linkOperador(listo.token_operador)))} target="_blank">Enviar link al operador ({listo.operador})</Btn>
             <Btn variante="secundario" onClick={() => navigator.clipboard.writeText(linkOperador(listo.token_operador))}>Copiar link del operador</Btn>
           </div>
+        </Modal>
+      )}
+
+      {alta && (
+        <Modal titulo={alta.tipo === "proveedor" ? "Nueva línea de transporte" : "Nuevo operador"} onClose={() => setAlta(null)} ancho={460}>
+          <form onSubmit={guardarAlta}>
+            <Grid>
+              <Campo label="Nombre *" span={2}>
+                <input autoFocus required value={alta.nombre} onChange={(e) => setAlta({ ...alta, nombre: e.target.value })} style={inputStyle} />
+              </Campo>
+              {alta.tipo === "proveedor" ? (
+                <>
+                  <Campo label="Contacto"><input value={alta.contacto} onChange={(e) => setAlta({ ...alta, contacto: e.target.value })} style={inputStyle} /></Campo>
+                  <Campo label="Teléfono"><input value={alta.telefono} onChange={(e) => setAlta({ ...alta, telefono: e.target.value })} inputMode="tel" style={inputStyle} /></Campo>
+                </>
+              ) : (
+                <>
+                  <Campo label="Teléfono"><input value={alta.telefono} onChange={(e) => setAlta({ ...alta, telefono: e.target.value })} inputMode="tel" style={inputStyle} /></Campo>
+                  <Campo label="Folio licencia"><input value={alta.folio} onChange={(e) => setAlta({ ...alta, folio: e.target.value })} style={inputStyle} /></Campo>
+                </>
+              )}
+            </Grid>
+            <p style={{ fontSize: 12, color: C.muted, margin: "10px 0 0" }}>
+              {alta.tipo === "proveedor"
+                ? "Queda en el catálogo de transportistas y seleccionada en este servicio."
+                : `Queda ligado a ${provs.find((p) => p.id === form.proveedor_id)?.nombre || "la línea seleccionada"} y seleccionado en este servicio.`}
+            </p>
+            {errorAlta && <p style={{ color: C.red, fontSize: 13, margin: "8px 0 0" }}>{errorAlta}</p>}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+              <Btn variante="secundario" onClick={() => setAlta(null)}>Cancelar</Btn>
+              <Btn type="submit" disabled={guardandoAlta}>{guardandoAlta ? "Guardando…" : "Guardar y usar"}</Btn>
+            </div>
+          </form>
         </Modal>
       )}
     </div>
