@@ -269,7 +269,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
           <option value="cancelados">Cancelados</option>
         </select>
       </div>
-      <Tabla onVisibles={setVisibles} columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Pago proveedor", ""]}>
+      <Tabla onVisibles={setVisibles} columnas={["ID TRACK", "Fecha", "Cliente", "Transportista", "Ruta", "Estatus", "Costo", "Venta", "Utilidad", "Margen", "Facturación", "Factura cliente", "Pago proveedor", ""]}>
         {filtrados.map((s, i) => (
           <Tr key={s.id} i={i} onClick={() => abrir(s)}>
             <Td fuerte>{s.id_track}</Td>
@@ -284,10 +284,8 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <Td>{pct(s.margen_pct)}</Td>
             <Td>
               <span style={{ color: FACT[s.estatus_facturacion || "por_facturar"]?.color, fontWeight: 600, fontSize: 12 }}>{FACT[s.estatus_facturacion || "por_facturar"]?.label}</span>
-              {s.estatus_facturacion === "facturado" && s.factura_kayard && (
-                <span style={{ display: "block", fontSize: 11, color: C.muted }}>{s.factura_kayard}</span>
-              )}
             </Td>
+            <Td><CeldaFactura s={s} onGuardado={(valor) => setServicios((lista) => lista.map((x) => (x.id === s.id ? { ...x, factura_kayard: valor } : x)))} /></Td>
             <Td>{s.estatus_pago === "pagado" ? "Pagado" : "Pendiente"}</Td>
             <Td>
               {s.estatus === "cancelado" ? (
@@ -381,5 +379,46 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
         />
       )}
     </div>
+  );
+}
+
+// Captura del folio de factura al cliente sin abrir la ventana del servicio.
+// Guarda al salir del campo o con Enter; el clic no debe abrir el detalle.
+function CeldaFactura({ s, onGuardado }: { s: ServicioV; onGuardado: (valor: string) => void }) {
+  const [valor, setValor] = useState(s.factura_kayard || "");
+  const [estado, setEstado] = useState<"" | "guardando" | "ok" | "error">("");
+  const supabase = createClient();
+
+  async function guardar() {
+    const nuevo = valor.trim();
+    if (nuevo === (s.factura_kayard || "")) return;
+    setEstado("guardando");
+    const { error } = await supabase.from("costos_venta")
+      .upsert({ servicio_id: s.id, factura_kayard: nuevo || null, updated_at: new Date().toISOString() });
+    if (error) { setEstado("error"); return; }
+    setEstado("ok");
+    onGuardado(nuevo);
+    setTimeout(() => setEstado(""), 1500);
+  }
+
+  return (
+    <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <input data-factura="1" value={valor} onChange={(e) => setValor(e.target.value)} onBlur={guardar}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          // Enter guarda y brinca al renglón de abajo, para cargar varias de corrido
+          const campos = Array.from(document.querySelectorAll<HTMLInputElement>('input[data-factura="1"]'));
+          const siguiente = campos[campos.indexOf(e.currentTarget) + 1];
+          e.currentTarget.blur();
+          siguiente?.focus();
+        }}
+        placeholder="—" title="Folio de la factura al cliente · Enter pasa al siguiente"
+        style={{ ...inputStyle, width: 120, padding: "0.25rem 0.5rem", fontSize: 12,
+          borderColor: estado === "error" ? C.red : estado === "ok" ? C.green : undefined }} />
+      <span style={{ fontSize: 11, color: estado === "error" ? C.red : C.green, width: 10 }}>
+        {estado === "guardando" ? "…" : estado === "ok" ? "✓" : estado === "error" ? "!" : ""}
+      </span>
+    </span>
   );
 }
