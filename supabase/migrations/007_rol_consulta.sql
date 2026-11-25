@@ -28,3 +28,8 @@ create policy bitacora_insertar on public.servicio_estatus for insert to authent
 drop policy if exists evidencias_insertar on public.evidencias;
 create policy evidencias_insertar on public.evidencias for insert to authenticated
   with check (is_staff() and not es_solo_lectura());
+
+-- El rol de consulta tiene que ser válido también para la base, no solo para la app
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role = any (array['admin','direccion','operaciones','compras','ventas','facturacion','monitoreo','consulta']));
