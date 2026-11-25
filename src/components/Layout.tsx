@@ -2,7 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MENU, ROLES, puedeVer } from "@/lib/constants";
+import { MENU, ROLES, esSoloLectura, puedeVer } from "@/lib/constants";
+import { marcarSoloLectura } from "@/lib/soloLectura";
 import { C } from "./ui";
 
 interface LayoutProps {
@@ -13,6 +14,8 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, userName, userRole, userInitial }: LayoutProps) {
+  const soloLectura = esSoloLectura(userRole);
+  marcarSoloLectura(soloLectura);
   const [collapsed, setCollapsed] = useState(false);
   const [abiertoMovil, setAbiertoMovil] = useState(false);
   const pathname = usePathname();
@@ -78,6 +81,15 @@ export default function Layout({ children, userName, userRole, userInitial }: La
           </div>
         </header>
         <main className="ktm-main" style={{ flex: 1, padding: "1.5rem", overflowY: "auto", backgroundColor: C.bg }}>
+          {soloLectura && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(107,182,236,0.12)",
+              border: "1px solid rgba(107,182,236,0.4)", borderRadius: 10, padding: "0.5rem 0.85rem", marginBottom: 14 }}>
+              <span style={{ fontSize: 15 }}>👁️</span>
+              <p style={{ margin: 0, fontSize: 12.5, color: C.text }}>
+                <b style={{ color: C.blue }}>Modo consulta.</b> Puedes ver toda la información del sistema, pero no guardar cambios.
+              </p>
+            </div>
+          )}
           {children}
         </main>
       </div>

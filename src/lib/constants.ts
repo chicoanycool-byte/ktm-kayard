@@ -31,7 +31,13 @@ export const ROLES: Record<string, string> = {
   ventas: "Ventas",
   facturacion: "Facturación",
   monitoreo: "Monitoreo",
+  consulta: "Consulta (solo lectura)",
 };
+
+// Rol que entra a todas las pantallas pero no puede guardar nada.
+// El bloqueo de escritura vive en la base de datos (políticas RLS), no en los botones.
+export const ROL_CONSULTA = "consulta";
+export const esSoloLectura = (rol?: string | null) => rol === ROL_CONSULTA;
 
 export type MenuItem = { href: string; label: string; icon: string; roles?: string[] };
 export type MenuGrupo = { titulo: string; items: MenuItem[] };
@@ -92,6 +98,7 @@ export const MENU: MenuGrupo[] = [
 ];
 
 export function puedeVer(item: MenuItem, role: string) {
+  if (esSoloLectura(role)) return true;   // consulta ve todo
   return !item.roles || item.roles.includes(role);
 }
 

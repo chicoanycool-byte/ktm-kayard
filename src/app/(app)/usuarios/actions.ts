@@ -1,13 +1,13 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireRol } from "@/lib/session";
+import { requireEscritura } from "@/lib/session";
 import { ROLES } from "@/lib/constants";
 
 type Res = { ok: boolean; error?: string };
 
 export async function crearUsuario(datos: { email: string; password: string; full_name: string; role: string }): Promise<Res> {
-  await requireRol(["admin"]);
+  await requireEscritura(["admin"]);
   if (!ROLES[datos.role]) return { ok: false, error: "Rol inválido" };
   if ((datos.password || "").length < 8) return { ok: false, error: "La contraseña debe tener al menos 8 caracteres" };
   try {
@@ -25,7 +25,7 @@ export async function crearUsuario(datos: { email: string; password: string; ful
 }
 
 export async function cambiarPassword(id: string, password: string): Promise<Res> {
-  await requireRol(["admin"]);
+  await requireEscritura(["admin"]);
   if ((password || "").length < 8) return { ok: false, error: "La contraseña debe tener al menos 8 caracteres" };
   try {
     const { error } = await createAdminClient().auth.admin.updateUserById(id, { password });

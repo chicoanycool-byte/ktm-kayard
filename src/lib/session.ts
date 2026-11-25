@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { esSoloLectura } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 
 export type Perfil = { id: string; full_name: string; email: string; role: string; is_active: boolean };
@@ -13,8 +14,17 @@ export async function getPerfil() {
   return { supabase, user, perfil: perfil as Perfil };
 }
 
+// Para abrir una pantalla: el rol de consulta entra a cualquiera, solo a mirar
 export async function requireRol(roles: string[]) {
   const ctx = await getPerfil();
-  if (!roles.includes(ctx.perfil.role)) redirect("/dashboard");
+  if (!esSoloLectura(ctx.perfil.role) && !roles.includes(ctx.perfil.role)) redirect("/dashboard");
+  return ctx;
+}
+
+// Para las acciones que escriben desde el servidor, que no pasan por las políticas
+// de la base porque usan la llave de servicio: ahí el rol de consulta nunca entra.
+export async function requireEscritura(roles: string[]) {
+  const ctx = await getPerfil();
+  if (esSoloLectura(ctx.perfil.role) || !roles.includes(ctx.perfil.role)) redirect("/dashboard");
   return ctx;
 }
