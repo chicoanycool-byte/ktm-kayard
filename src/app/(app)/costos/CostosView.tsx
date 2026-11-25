@@ -61,6 +61,11 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
     costo: a.costo + Number(s.total_costo || 0), venta: a.venta + Number(s.total_venta || 0), util: a.util + Number(s.utilidad || 0),
   }), { costo: 0, venta: 0, util: 0 }), [filtrados]);
 
+  const exigeFactura = form.estatus_facturacion === "facturado" && sel?.estatus_facturacion !== "facturado";
+  const faltaFactura = exigeFactura && !form.factura_kayard.trim();
+  // Viene de la migración: quedó facturado sin número y conviene capturarlo, pero no frena el guardado
+  const facturaPendiente = sel?.estatus_facturacion === "facturado" && !form.factura_kayard.trim();
+
   function abrir(s: ServicioV) {
     setSel(s);
     setAviso("");
@@ -91,6 +96,13 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
   async function guardar(e?: React.FormEvent, extra: Record<string, unknown> = {}) {
     e?.preventDefault();
     if (!sel) return null;
+    // Facturado quiere decir que ya hay factura: sin número no se deja marcar
+    const estatusFinal = (extra.estatus_facturacion as string) || form.estatus_facturacion;
+    const yaEstaba = sel.estatus_facturacion === "facturado";
+    if (estatusFinal === "facturado" && !yaEstaba && !form.factura_kayard.trim()) {
+      setAviso("Para marcarlo como Facturado hay que capturar la factura al cliente.");
+      return null;
+    }
     setLoading(true);
     const datos: Record<string, unknown> = { servicio_id: sel.id, updated_at: new Date().toISOString(), ...extra };
     if (form.estatus_facturacion === "facturado" && !sel.enviado_facturar_at && !extra.enviado_facturar_at) datos.enviado_facturar_at = new Date().toISOString();
@@ -147,7 +159,7 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
       return;
     }
     const ventana = window.open("about:blank", "_blank");
-    const fila = await guardar(undefined, { estatus_facturacion: "facturado", enviado_facturar_at: new Date().toISOString() });
+    const fila = await guardar(undefined, { estatus_facturacion: "enviado", enviado_facturar_at: new Date().toISOString() });
     if (fila && ventana) ventana.location.href = linkWhatsApp(telFact, msgFacturar(fila, nomFact));
     else ventana?.close();
     setSel(null);
@@ -270,7 +282,12 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <Td>{money(s.total_venta)}</Td>
             <Td style={{ color: Number(s.utilidad) < 0 ? C.red : C.green, fontWeight: 600 }}>{money(s.utilidad)}</Td>
             <Td>{pct(s.margen_pct)}</Td>
-            <Td><span style={{ color: FACT[s.estatus_facturacion || "por_facturar"]?.color, fontWeight: 600, fontSize: 12 }}>{FACT[s.estatus_facturacion || "por_facturar"]?.label}</span></Td>
+            <Td>
+              <span style={{ color: FACT[s.estatus_facturacion || "por_facturar"]?.color, fontWeight: 600, fontSize: 12 }}>{FACT[s.estatus_facturacion || "por_facturar"]?.label}</span>
+              {s.estatus_facturacion === "facturado" && s.factura_kayard && (
+                <span style={{ display: "block", fontSize: 11, color: C.muted }}>{s.factura_kayard}</span>
+              )}
+            </Td>
             <Td>{s.estatus_pago === "pagado" ? "Pagado" : "Pendiente"}</Td>
             <Td>
               {s.estatus === "cancelado" ? (
@@ -319,9 +336,14 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
             <div style={{ marginTop: 12 }}>
               <Grid>
                 <Seccion titulo="Facturación" />
-                <Campo label="Factura(s) de cliente">
-                  <input value={form.factura_kayard} onChange={(e) => setForm({ ...form, factura_kayard: e.target.value })} placeholder="A-1234" style={inputStyle} />
-                  <span style={{ fontSize: 11, color: C.muted }}>Si son varias, sepáralas con coma.</span>
+                <Campo label={`Factura(s) de cliente${exigeFactura ? " *" : ""}`}>
+                  <input value={form.factura_kayard} onChange={(e) => setForm({ ...form, factura_kayard: e.target.value })} placeholder="A-1234"
+                    style={{ ...inputStyle, borderColor: faltaFactura ? C.red : undefined }} />
+                  <span style={{ fontSize: 11, color: faltaFactura ? C.red : facturaPendiente ? C.amber : C.muted }}>
+                    {faltaFactura ? "Captura el número para poder marcarlo como Facturado."
+                      : facturaPendiente ? "Quedó facturado sin número; si lo tienes, captúralo aquí."
+                      : "Si son varias, sepáralas con coma."}
+                  </span>
                 </Campo>
                 <Campo label="Factura(s) del proveedor">
                   <input value={form.factura_proveedor} onChange={(e) => setForm({ ...form, factura_proveedor: e.target.value })} placeholder="F-5678" style={inputStyle} />
@@ -330,7 +352,6 @@ export default function CostosView({ servicios: ini }: { servicios: ServicioV[] 
                 <Campo label="Estatus facturación">
                   <select value={form.estatus_facturacion} onChange={(e) => setForm({ ...form, estatus_facturacion: e.target.value })} style={inputStyle}>
                     {Object.entries(FACT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          <option value="cancelados">Cancelados</option>
                   </select>
                 </Campo>
                 <Campo label="Pago al proveedor">
